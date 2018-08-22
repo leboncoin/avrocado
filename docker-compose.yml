@@ -1,0 +1,42 @@
+version: "3.0"
+
+services:
+  test:
+    image: containers.repo.bon-coin.net/base/golang
+    volumes:
+      - ../../build/wait-for.sh:/usr/bin/wait-for:ro
+      - ../..:/go/src/github.schibsted.io/leboncoin/go
+    working_dir: /go/src/github.schibsted.io/leboncoin/go/common/avro
+    environment:
+      GO_INTEGRATION_TESTS: "1"
+      SCHEMA_REGISTRY_URL: "http://schemaregistry:8081"
+    command: >-
+      wait-for schemaregistry:8081 -t 30 --
+      go test -v -p=1 -race ./...
+    depends_on:
+      - schemaregistry
+
+  zookeeper:
+    image: containers.repo.bon-coin.net/infra/zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: containers.repo.bon-coin.net/infra/kafka
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_BROKER_ID: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+
+  schemaregistry:
+    image: containers.repo.bon-coin.net/infra/schemaregistry
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+      SCHEMA_REGISTRY_HOST_NAME: schemaregistry
+    depends_on:
+      - kafka
+      - zookeeper
