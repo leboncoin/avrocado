@@ -1,10 +1,10 @@
-# Avro
+# Avrocado
 
-A convenience library to handle Avro in golang built on top of [linkedin/goavro](https://github.com/linkedin/goavro).
-It is splitted into three parts:
-* Avro marshalling/unmarshalling using structure fields annotation inspired by the JSON standard library.
+Avrocado is a convenience library to handle Avro in golang, built on top of [linkedin/goavro](https://github.com/linkedin/goavro).
+It is split into three parts:
+* Avro marshalling/unmarshalling using structure fields annotations inspired by the JSON standard library.
 * A [confluentinc/schema-registry](https://github.com/confluentinc/schema-registry) client.
-* A codec registry which handles marshalling/unmarshalling handling schemas from the schema-registry.
+* A codec registry which handles marshalling/unmarshalling schemas from the schema-registry.
 
 ## Getting Started
 
@@ -64,7 +64,7 @@ The example can also be found [here](example_test.go).
 
 ## Installing
 
-Just run `go get github.com/leboncoin/avrocado
+Just run `go get github.com/leboncoin/avrocado`.
 
 ## Examples
 
