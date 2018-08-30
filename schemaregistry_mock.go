@@ -2,6 +2,17 @@ package avro
 
 import "fmt"
 
+// NewNOOPCodecRegistry returns a CodecRegistry that uses the NOOP
+// schema registry
+func NewNOOPCodecRegistry(subject string) *CodecRegistry {
+	return &CodecRegistry{
+		codecByID:  make(map[SchemaID]*Codec),
+		schemaByID: make(map[SchemaID]*Schema),
+		Registry:   NewNOOPClient(),
+		subject:    subject,
+	}
+}
+
 // Retrieved from https://github.com/Landoop/schema-registry
 
 type mockSchemaRegistry struct {
