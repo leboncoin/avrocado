@@ -33,10 +33,13 @@ var typeConversion = map[string]string{
 	"int16":   "int",
 	"int32":   "int",
 	"rune":    "int",
+	"uint":    "long",
+	"int":     "long",
 	"uint64":  "long",
 	"int64":   "long",
 	"float32": "float",
 	"float64": "double",
+	"bool":    "boolean",
 }
 
 // Copy from reflect/type.go

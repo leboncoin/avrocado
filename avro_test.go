@@ -28,7 +28,7 @@ func TestCamelCaseToSnakeCase(t *testing.T) {
 }
 
 func TestDefaultTypeNameEncoder(t *testing.T) {
-	require.Equal(t, "int", DefaultTypeNameEncoder("int"))
+	require.Equal(t, "long", DefaultTypeNameEncoder("int"))
 	require.Equal(t, "my_object", DefaultTypeNameEncoder("MyObject"))
 	require.Equal(t, "my_url", DefaultTypeNameEncoder("MyURL"))
 	require.Equal(t, "logo_image_url", DefaultTypeNameEncoder("LogoImageURL"))
@@ -400,8 +400,9 @@ func TestUnion(t *testing.T) {
 }
 
 type UserDataOptional struct {
-	Name *string
-	Age  *int32
+	Name    *string
+	Age     *int
+	Married *bool
 }
 
 func TestUnionOptional(t *testing.T) {
@@ -411,8 +412,9 @@ func TestUnionOptional(t *testing.T) {
 	    "name" : "userDataOptional",
 	    "namespace" : "my.example",
 	    "fields" : [
-	        {"name" : "Age", "type" : ["null", "int"]},
-		{"name" : "Name", "type" : ["null", "string"], "default": "null"}
+            {"name" : "Age", "type" : ["null", "int", "long"]},
+            {"name" : "Name", "type" : ["null", "string"], "default": "null"},
+            {"name" : "Married", "type" : ["null", "boolean"], "default": "null"}
 	    ]
 	}`
 
@@ -420,8 +422,9 @@ func TestUnionOptional(t *testing.T) {
 	assert.NoError(t, err)
 
 	name := "MyName"
-	age := int32(42)
-	expected := UserDataOptional{Name: &name, Age: &age}
+	age := int(42)
+	married := true
+	expected := UserDataOptional{Name: &name, Age: &age, Married: &married}
 
 	var decoded UserDataOptional
 
