@@ -2,27 +2,25 @@ version: "3.0"
 
 services:
   test:
-    image: containers.repo.bon-coin.net/base/golang
+    image: golang:1.11
     volumes:
-      - ../../build/wait-for.sh:/usr/bin/wait-for:ro
-      - ../..:/go/src/github.schibsted.io/leboncoin/go
-    working_dir: /go/src/github.schibsted.io/leboncoin/go/common/avro
+      - ./wait-for.sh:/usr/bin/wait-for:ro
+      - .:/go/src/github.com/avrocado
+    working_dir: /go/src/github.com/avrocado
     environment:
       GO_INTEGRATION_TESTS: "1"
       SCHEMA_REGISTRY_URL: "http://schemaregistry:8081"
-    command: >-
-      wait-for schemaregistry:8081 -t 30 --
-      go test -v -p=1 -race ./...
+    command: wait-for schemaregistry:8081 -t 30 -- go test -v -p=1 -race ./...
     depends_on:
       - schemaregistry
 
   zookeeper:
-    image: containers.repo.bon-coin.net/infra/zookeeper
+    image: confluentinc/cp-zookeeper:3.3.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
 
   kafka:
-    image: containers.repo.bon-coin.net/infra/kafka
+    image: confluentinc/cp-kafka:3.3.0
     environment:
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
@@ -33,7 +31,7 @@ services:
       - zookeeper
 
   schemaregistry:
-    image: containers.repo.bon-coin.net/infra/schemaregistry
+    image: confluentinc/cp-schema-registry:4.1.2
     environment:
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
       SCHEMA_REGISTRY_HOST_NAME: schemaregistry

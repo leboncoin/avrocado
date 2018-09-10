@@ -84,7 +84,7 @@ func containsSliceString(a []string, b []string) bool {
 
 func TestFunctionalSubjects(t *testing.T) {
 	if os.Getenv("GO_INTEGRATION_TESTS") != "1" {
-		return
+		t.Skip("not running integration tests")
 	}
 
 	schema := `
@@ -116,7 +116,7 @@ func TestFunctionalSubjects(t *testing.T) {
 
 func TestFunctionalVersions(t *testing.T) {
 	if os.Getenv("GO_INTEGRATION_TESTS") != "1" {
-		return
+		t.Skip("not running integration tests")
 	}
 
 	schemas := []string{`
@@ -162,7 +162,7 @@ func TestFunctionalVersions(t *testing.T) {
 
 func TestFunctionalIsRegistered_yes(t *testing.T) {
 	if os.Getenv("GO_INTEGRATION_TESTS") != "1" {
-		return
+		t.Skip("not running integration tests")
 	}
 
 	schema := `
@@ -198,7 +198,7 @@ func TestFunctionalIsRegistered_yes(t *testing.T) {
 
 func TestFunctionalIsRegistered_not(t *testing.T) {
 	if os.Getenv("GO_INTEGRATION_TESTS") != "1" {
-		return
+		t.Skip("not running integration tests")
 	}
 
 	c, err := NewSchemaRegistry(SchemaRegistryURL)
