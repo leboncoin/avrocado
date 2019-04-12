@@ -2,65 +2,92 @@
 
 
 [[projects]]
+  digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = "NUT"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:fcd865894ce87bcf6499e5d2db3526679e3ab1ae454f48070ebaf983efd20665"
   name = "github.com/fatih/camelcase"
   packages = ["."]
+  pruneopts = "NUT"
   revision = "44e46d280b43ec1531bb25252440e34f1b800b65"
   version = "v1.0.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:7f114b78210bf5b75f307fc97cff293633c835bab1e0ea8a744a44b39c042dfe"
   name = "github.com/golang/snappy"
   packages = ["."]
-  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
+  pruneopts = "NUT"
+  revision = "2a8bb927dd31d8daada140a5d09578521ce5c36a"
 
 [[projects]]
+  digest = "1:d96aa057f14c44b586902288ed688465af87f91df16814eee22509f471e4af45"
   name = "github.com/leboncoin/structs"
   packages = ["."]
+  pruneopts = "NUT"
   revision = "9809b6d3fc5ad101a5620ee0aa653e90c0ece527"
   version = "v1.0.1_lbc"
 
 [[projects]]
+  digest = "1:4691713ba89ab98bb4948437b259e624e4496a6cdfa18ee35c2cad63ae2f550e"
   name = "github.com/linkedin/goavro"
   packages = ["."]
-  revision = "fa8f6a30176ce945e115db0afad95ede93725eec"
-  version = "v2.3.0"
+  pruneopts = "NUT"
+  revision = "af12b3c46392134a7db8c1a8b6c6a33419fab0ea"
+  version = "v2.7.2"
 
 [[projects]]
   branch = "master"
+  digest = "1:409975b69bc41373a57675b4f330c7c656089ea2fb31a6d7e75f676b2387cc65"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "f15292f7a699fcc1a38a80977f80a046874ba8ac"
+  pruneopts = "NUT"
+  revision = "8f3deb6400f703ae833c9f6ea5684dde9e0cd9aa"
+  source = "github.com/CountFenring/mapstructure"
 
 [[projects]]
+  digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
   name = "github.com/pkg/errors"
   packages = ["."]
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
+  pruneopts = "NUT"
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = "NUT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:85adecf1dbfae5769cc62a8bcea6498f8e9f0e2452e4e6686eb36fa4428a5a6e"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
-    "require"
+    "require",
   ]
-  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
-  version = "v1.2.2"
+  pruneopts = "NUT"
+  revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
+  version = "v1.3.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f35fbf801f29bb372aee194565aca0984d056d69b78c87aa4e775a469cc34a2e"
+  input-imports = [
+    "github.com/fatih/camelcase",
+    "github.com/leboncoin/structs",
+    "github.com/linkedin/goavro",
+    "github.com/mitchellh/mapstructure",
+    "github.com/pkg/errors",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
