@@ -218,6 +218,13 @@ func (c *Codec) encodeUnionHook(k reflect.Kind, data interface{}) (interface{}, 
 		return map[string]interface{}{typeName: pointed.Interface()}, nil
 	}
 
+	if k == reflect.Struct {
+		s := structs.New(data)
+		s.TagName = "avro"
+		s.EncodeHook = c.encodeUnionHook
+		return s.Map(), nil
+	}
+
 	if value.Kind() == reflect.Slice && value.Len() > 0 && value.Index(0).Kind() == reflect.Struct {
 		var ret []interface{}
 		for i := 0; i < value.Len(); i++ {
@@ -233,6 +240,7 @@ func (c *Codec) encodeUnionHook(k reflect.Kind, data interface{}) (interface{}, 
 		value = convertToBaseType(value)
 		return value.Interface(), nil
 	}
+
 	return data, nil
 }
 
