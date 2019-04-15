@@ -160,7 +160,7 @@ type Parent struct {
 	Children []Child `avro:"children"`
 }
 
-func TestArray(t *testing.T) {
+func TestArrayOfRecord(t *testing.T) {
 	schema := `{
       "name": "Parent",
       "type": "record",
@@ -198,6 +198,35 @@ func TestArray(t *testing.T) {
 
 	assert.Equal(t, expected, decoded)
 
+}
+
+func TestArrayOfEnum(t *testing.T) {
+	schema := `{
+    "name": "values",
+    "type": {
+      "type": "array",
+      "items": {
+        "name": "enum_value",
+        "type": "enum",
+        "symbols": ["value1", "value2"]
+      }
+    }
+  }`
+
+	codec, err := NewCodec(schema)
+	assert.NoError(t, err)
+
+	type EnumValue string
+
+	expected := []EnumValue{"value1", "value2"}
+
+	avro, err := codec.Marshal(&expected)
+	assert.NoError(t, err)
+
+	var decoded []EnumValue
+	err = codec.Unmarshal(avro, &decoded)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, decoded)
 }
 
 type Address struct {
@@ -1122,6 +1151,84 @@ func TestCodec_Marshal_struct_with_union_different_union(t *testing.T) {
 	if assert.NoError(t, err) {
 		var decoded StructEvent
 
+		err = codec.Unmarshal(avro, &decoded)
+		assert.NoError(t, err)
+		assert.Equal(t, expected, decoded)
+	}
+}
+
+func TestComplexRecursion(t *testing.T) {
+	schema := `{
+    "type": "record",
+    "name": "event_record",
+    "fields": [
+      {
+        "name": "field",
+        "type": {
+          "type": "record",
+          "name": "field_record",
+          "fields": [
+            {
+              "name": "values",
+              "type": {
+                "name": "enum_value_array_array",
+                "type": "array",
+                "items": {
+                  "name": "enum_value_array",
+                  "type": "array",
+                  "items": [
+                    "null",
+                    {
+                      "name": "enum_value",
+                      "type": "enum",
+                      "symbols": ["value1", "value2"]
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }`
+
+	codec, err := NewCodec(schema)
+	require.NoError(t, err)
+
+	type EnumValue string
+
+	type EventField struct {
+		Values [][]*EnumValue `avro:"values"`
+	}
+
+	type Event struct {
+		Field EventField `avro:"field"`
+	}
+
+	var (
+		value1 = EnumValue("value1")
+		value2 = EnumValue("value2")
+	)
+
+	expected := Event{
+		Field: EventField{
+			Values: [][]*EnumValue{
+				{
+					&value2,
+					nil,
+					&value1,
+				},
+				{
+					&value2,
+				},
+			},
+		},
+	}
+
+	avro, err := codec.Marshal(expected)
+	if assert.NoError(t, err) {
+		var decoded Event
 		err = codec.Unmarshal(avro, &decoded)
 		assert.NoError(t, err)
 		assert.Equal(t, expected, decoded)
