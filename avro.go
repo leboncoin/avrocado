@@ -42,37 +42,6 @@ var typeConversion = map[string]string{
 	"bool":    "boolean",
 }
 
-// Copy from reflect/type.go
-var kindNames = []string{
-	"invalid",
-	"bool",
-	"int",
-	"int8",
-	"int16",
-	"int32",
-	"int64",
-	"uint",
-	"uint8",
-	"uint16",
-	"uint32",
-	"uint64",
-	"uintptr",
-	"float32",
-	"float64",
-	"complex64",
-	"complex128",
-	"array",
-	"chan",
-	"func",
-	"interface",
-	"map",
-	"ptr",
-	"slice",
-	"string",
-	"struct",
-	"unsafe.Pointer",
-}
-
 var avroBaseTypes = []string{
 	"null",
 	"boolean",
@@ -185,73 +154,66 @@ func (c *Codec) encodeTypeName(name string) string {
 	return c.TypeNameEncoder(name)
 }
 
-func (c *Codec) encodeUnionHook(k reflect.Kind, data interface{}) (interface{}, error) {
+func (c *Codec) encodeUnionHook(kind reflect.Kind, data interface{}) (interface{}, error) {
 	value := reflect.ValueOf(data)
-	var valueTypeName string
-	if data != nil {
-		valueTypeName = value.Type().String()
-	} else {
-		valueTypeName = "invalid"
-	}
 
-	if k == reflect.Ptr && data != nil {
-		pointed := value.Elem()
-
-		if !pointed.IsValid() {
-			return map[string]interface{}{"null": nil}, nil
-		}
-		typeName := c.getTypeName(pointed)
-
-		if pointed.Kind() == reflect.Struct {
-			typeName = c.addNamespace(typeName)
-			s := structs.New(pointed.Interface())
-			s.TagName = "avro"
-			s.EncodeHook = c.encodeUnionHook
-			return map[string]interface{}{typeName: s.Map()}, nil
-		}
-
-		if isAvroBaseType(typeName) {
-			return map[string]interface{}{typeName: pointed.Interface()}, nil
-		}
-		typeName = c.addNamespace(typeName)
-		pointed = convertToBaseType(pointed)
-		return map[string]interface{}{typeName: pointed.Interface()}, nil
-	}
-
-	if k == reflect.Struct {
+	switch kind {
+	case reflect.Struct:
 		s := structs.New(data)
 		s.TagName = "avro"
 		s.EncodeHook = c.encodeUnionHook
-		return s.Map(), nil
-	}
+		data = s.Map()
 
-	if value.Kind() == reflect.Slice && value.Len() > 0 && value.Index(0).Kind() == reflect.Struct {
-		var ret []interface{}
-		for i := 0; i < value.Len(); i++ {
-			s := structs.New(value.Index(i).Interface())
-			s.TagName = "avro"
-			s.EncodeHook = c.encodeUnionHook
-			ret = append(ret, s.Map())
+	case reflect.Slice:
+		elemType := reflect.TypeOf(data).Elem()
+
+		if elemType.Kind() == reflect.Struct {
+			var o map[string]interface{}
+			elemType = reflect.TypeOf(o)
 		}
-		return ret, nil
-	}
 
-	if !isBaseType(valueTypeName) {
-		value = convertToBaseType(value)
-		return value.Interface(), nil
+		newData := reflect.MakeSlice(reflect.SliceOf(elemType), value.Len(), value.Cap())
+		for idx := 0; idx < value.Len(); idx++ {
+			elem := value.Index(idx)
+			val, err := c.encodeUnionHook(elem.Kind(), elem.Interface())
+			if err != nil {
+				return nil, err
+			}
+
+			newData.Index(idx).Set(reflect.ValueOf(val))
+		}
+
+		data = newData.Interface()
+
+	case reflect.Ptr:
+		if data != nil {
+			pointed := value.Elem()
+			if pointed.IsValid() {
+				val, err := c.encodeUnionHook(pointed.Kind(), pointed.Interface())
+				if err != nil {
+					return nil, err
+				}
+
+				typeName := c.getTypeName(pointed)
+				if !isAvroBaseType(typeName) {
+					typeName = c.addNamespace(typeName)
+				}
+
+				data = map[string]interface{}{
+					typeName: val,
+				}
+			} else {
+				data = map[string]interface{}{
+					"null": nil,
+				}
+			}
+		}
+
+	default:
+		data = convertToBaseType(value).Interface()
 	}
 
 	return data, nil
-}
-
-// isBaseType return is a givem type name is a standard golang type
-func isBaseType(typeName string) bool {
-	for _, t := range kindNames {
-		if typeName == t {
-			return true
-		}
-	}
-	return false
 }
 
 func isAvroBaseType(avroType string) bool {
@@ -265,7 +227,8 @@ func isAvroBaseType(avroType string) bool {
 
 // convertToBaseType takes a value which have a custom type (type MyType string) and returns the translation in basic type
 func convertToBaseType(value reflect.Value) reflect.Value {
-	selectedType := value.Type()
+	var selectedType reflect.Type
+
 	switch value.Kind() {
 	case reflect.String:
 		selectedType = reflect.TypeOf("")
@@ -293,7 +256,10 @@ func convertToBaseType(value reflect.Value) reflect.Value {
 		selectedType = reflect.TypeOf(float32(0))
 	case reflect.Float64:
 		selectedType = reflect.TypeOf(float64(0))
+	default:
+		return value
 	}
+
 	return value.Convert(selectedType)
 }
 
@@ -311,11 +277,13 @@ func (c *Codec) getTypeName(val reflect.Value) string {
 	if avroNamer, ok := data.(TypeNamer); ok {
 		return avroNamer.AvroName()
 	}
+
 	ptrData := toStructPtr(data)
 	// Check if the pointer on value implement the interface, with a pointer as receiver
-	if avroNamer, ok := (ptrData).(TypeNamer); ok {
+	if avroNamer, ok := ptrData.(TypeNamer); ok {
 		return avroNamer.AvroName()
 	}
+
 	// otherwise return the type name
 	return c.encodeTypeName(val.Type().Name())
 }
@@ -346,16 +314,28 @@ func (c Codec) decodeUnionHook(from reflect.Type, to reflect.Type, data interfac
 	return data, nil
 }
 
-func (c *Codec) marshal(codec *goavro.Codec, st interface{}) (avro []byte, err error) {
-	if !structs.IsStruct(st) {
-		return codec.BinaryFromNative(nil, st)
+func (c *Codec) marshal(codec *goavro.Codec, data interface{}) ([]byte, error) {
+	var (
+		value = reflect.ValueOf(data)
+		kind  = value.Kind()
+	)
+
+	switch kind {
+	case reflect.Ptr:
+		value = value.Elem()
+		kind = value.Kind()
+		data = value.Interface()
 	}
-	avroStruct := structs.New(st)
-	avroStruct.TagName = "avro"
-	avroStruct.EncodeHook = c.encodeUnionHook
-	m := avroStruct.Map()
-	avro, err = codec.BinaryFromNative(nil, m)
-	return avro, err
+
+	nativeData, err := c.encodeUnionHook(kind, data)
+	if err != nil {
+		return nil, err
+	}
+
+	// j, _ := json.MarshalIndent(nativeData, "", "  ")
+	// fmt.Println(string(j))
+
+	return codec.BinaryFromNative(nil, nativeData)
 }
 
 func (c *Codec) unmarshal(codec *goavro.Codec, avro []byte, output interface{}) (err error) {
