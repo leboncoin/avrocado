@@ -38,18 +38,18 @@ func TestDefaultTypeNameEncoder(t *testing.T) {
 
 func TestAvroCodec(t *testing.T) {
 	schema := `{
-	  "type": "record",
-	  "name": "Person",
-	  "fields": [
-	    {
-	      "name": "name",
-	      "type": "string"
-            }, {
-	      "name": "age",
-	      "type": "int"
-	    }
-	  ]
-  	}`
+      "type": "record",
+      "name": "Person",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        }, {
+          "name": "age",
+          "type": "int"
+        }
+      ]
+    }`
 
 	val := Person{"Nico", 36}
 	var decoded Person
@@ -86,37 +86,36 @@ type MyStruct struct {
 
 func TestStructureWithDifferentTypes(t *testing.T) {
 	schema := `{
-	  "type": "record",
-	  "name": "MyStruct",
-	  "fields": [
-	    {
-	      "name": "MyNull",
-	      "type": "null"
-            }, {
-	      "name": "MyBool",
-	      "type": "boolean"
-	    }, {
-	      "name": "MyInt",
-	      "type": "int"
-	    }, {
-	      "name": "MyLong",
-	      "type": "long"
-	    }, {
-	      "name": "MyFloat",
-	      "type": "float"
-	    }, {
-	      "name": "MyDouble",
-	      "type": "double"
-	    }, {
-	      "name": "MyBytes",
-	      "type": "bytes"
-	    }, {
-	      "name": "MyString",
-	      "type": "string"
-	    }
-	  ]
-  	}
-	`
+      "type": "record",
+      "name": "MyStruct",
+      "fields": [
+        {
+          "name": "MyNull",
+          "type": "null"
+        }, {
+          "name": "MyBool",
+          "type": "boolean"
+        }, {
+          "name": "MyInt",
+          "type": "int"
+        }, {
+          "name": "MyLong",
+          "type": "long"
+        }, {
+          "name": "MyFloat",
+          "type": "float"
+        }, {
+          "name": "MyDouble",
+          "type": "double"
+        }, {
+          "name": "MyBytes",
+          "type": "bytes"
+        }, {
+          "name": "MyString",
+          "type": "string"
+        }
+      ]
+    }`
 
 	expected := MyStruct{
 		MyNull:   nil,
@@ -163,26 +162,28 @@ type Parent struct {
 }
 
 func TestArray(t *testing.T) {
-	schema := `
-	{
-	    "name": "Parent",
-	    "type":"record",
-	    "fields":[
-	        {
-	            "name":"children",
-	            "type":{
-	                "type": "array",
-	                "items":{
-	                    "name":"Child",
-	                    "type":"record",
-	                    "fields":[
-	                        {"name":"name", "type":"string"}
-	                    ]
-	                }
-	            }
-	        }
-	    ]
-	}`
+	schema := `{
+      "name": "Parent",
+      "type": "record",
+      "fields": [
+        {
+          "name": "children",
+          "type": {
+            "type": "array",
+            "items": {
+              "name": "Child",
+              "type": "record",
+              "fields": [
+                {
+                  "name": "name",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }`
 
 	expected := Parent{[]Child{{"Riri"}, {"Fifi"}, {"Loulou"}}}
 	var decoded Parent
@@ -214,28 +215,45 @@ type User struct {
 }
 
 func TestSubStructures(t *testing.T) {
-	schema := `
-	{
-	    "type" : "record",
-	    "name" : "User",
-	    "namespace" : "my.example",
-	    "fields" : [
-	        {"name" : "username", "type" : "string"},
-	        {"name" : "age", "type" : "int"},
-	        {"name" : "address", "type" : {
-	            "type" : "record",
-	            "name" : "mailing_address",
-	            "fields" : [
-	                {"name" : "street", "type" : "string"},
-	                {"name" : "city", "type" : "string"},
-	                {"name" : "country", "type" : "string"},
-			{"name" : "zip", "type" : "string"}
-	                ]
-		    }
-		}
-	    ]
-	}
-	`
+	schema := `{
+      "type": "record",
+      "name": "User",
+      "namespace": "my.example",
+      "fields": [
+        {
+          "name": "username",
+          "type": "string"
+        },
+        {
+          "name": "age",
+          "type": "int"
+        },
+        {
+          "name": "address",
+          "type": {
+            "type": "record",
+            "name": "mailing_address",
+            "fields": [
+              {
+                "name": "street",
+                "type": "string"},
+              {
+                "name": "city",
+                "type": "string"
+              },
+              {
+                "name": "country",
+                "type": "string"
+              },
+              {
+                "name": "zip",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      ]
+    }`
 
 	codec, err := NewCodec(schema)
 	assert.NoError(t, err)
@@ -268,13 +286,18 @@ type UserInfo struct {
 }
 
 func TestDefaultValues(t *testing.T) {
-	schema := `
-	{
-	    "type" : "record",
-	    "name" : "userInfo",
-	    "namespace" : "my.example",
-	    "fields" : [{"name" : "age", "type" : "int", "default" : -1}]
-	}`
+	schema := `{
+      "type": "record",
+      "name": "userInfo",
+      "namespace": "my.example",
+      "fields": [
+        {
+          "name": "age",
+          "type": "int",
+          "default": -1
+        }
+      ]
+    }`
 
 	expected := UserInfo{Age: 3}
 	var decoded UserInfo
@@ -306,13 +329,17 @@ type UserData struct {
 }
 
 func TestGoStructureWithMoreFields(t *testing.T) {
-	schema := `
-	{
-	    "type" : "record",
-	    "name" : "userInfo",
-	    "namespace" : "my.example",
-	    "fields" : [{"name" : "age", "type" : "int"}]
-	}`
+	schema := `{
+      "type": "record",
+      "name": "userInfo",
+      "namespace": "my.example",
+      "fields": [
+        {
+          "name": "age",
+          "type": "int"
+        }
+      ]
+    }`
 
 	// The field missing in avro is lost
 	expected := UserData{"", 1}
@@ -333,16 +360,21 @@ func TestGoStructureWithMoreFields(t *testing.T) {
 }
 
 func TestAvroStructureWithMoreFields(t *testing.T) {
-	schema := `
-	{
-	    "type" : "record",
-	    "name" : "userData",
-	    "namespace" : "my.example",
-	    "fields" : [
-	        {"name" : "age", "type" : "int"},
-	        {"name" : "name", "type" : "string"}
-	    ]
-	}`
+	schema := `{
+      "type": "record",
+      "name": "userData",
+      "namespace": "my.example",
+      "fields": [
+        {
+          "name": "age",
+          "type": "int"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    }`
 
 	expected := UserInfo{1}
 
@@ -355,16 +387,22 @@ func TestAvroStructureWithMoreFields(t *testing.T) {
 }
 
 func TestAvroStructureWithMoreFieldsWithDefaultValue(t *testing.T) {
-	schema := `
-	{
-	    "type" : "record",
-	    "name" : "userData",
-	    "namespace" : "my.example",
-	    "fields" : [
-	        {"name" : "age", "type" : "int"},
-		{"name" : "name", "type" : "string", "default": ""}
-	    ]
-	}`
+	schema := `{
+      "type": "record",
+      "name": "userData",
+      "namespace": "my.example",
+      "fields": [
+        {
+          "name": "age",
+          "type": "int"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "default": ""
+        }
+      ]
+    }`
 
 	expected := UserInfo{1}
 	var decoded UserInfo
@@ -406,17 +444,27 @@ type UserDataOptional struct {
 }
 
 func TestUnionOptional(t *testing.T) {
-	schema := `
-	{
-	    "type" : "record",
-	    "name" : "userDataOptional",
-	    "namespace" : "my.example",
-	    "fields" : [
-            {"name" : "Age", "type" : ["null", "int", "long"]},
-            {"name" : "Name", "type" : ["null", "string"], "default": "null"},
-            {"name" : "Married", "type" : ["null", "boolean"], "default": "null"}
-	    ]
-	}`
+	schema := `{
+      "type": "record",
+      "name": "userDataOptional",
+      "namespace": "my.example",
+      "fields": [
+        {
+          "name": "Age",
+          "type": ["null", "int", "long"]
+        },
+        {
+          "name": "Name",
+          "type": ["null", "string"],
+          "default": "null"
+        },
+        {
+          "name": "Married",
+          "type": ["null", "boolean"],
+          "default": "null"
+        }
+      ]
+    }`
 
 	codec, err := NewCodec(schema)
 	assert.NoError(t, err)
@@ -438,16 +486,22 @@ func TestUnionOptional(t *testing.T) {
 }
 
 func TestCodecRegistry_Marshal_with_namespace(t *testing.T) {
-	schema := `
-	{
-	    "type" : "record",
-	    "name" : "userDataOptional",
-		"namespace": "lbc",
-	    "fields" : [
-	        {"name" : "Age", "type" : ["null", "int"]},
-			{"name" : "Name", "type" : ["null", "string"], "default": "null"}
-	    ]
-	}`
+	schema := `{
+      "type": "record",
+      "name": "userDataOptional",
+      "namespace": "lbc",
+      "fields": [
+        {
+          "name": "Age",
+          "type": ["null", "int"]
+        },
+        {
+          "name": "Name",
+          "type": ["null", "string"],
+          "default": "null"
+        }
+      ]
+    }`
 
 	codec, err := NewCodec(schema)
 	assert.NoError(t, err)
@@ -468,28 +522,50 @@ func TestCodecRegistry_Marshal_with_namespace(t *testing.T) {
 }
 
 func TestUnionOptional_with_nil_value(t *testing.T) {
-	schema := `
-	{
-	    "type" : "record",
-	    "name" : "user_optional",
-		"namespace": "lbc",
-	    "fields" : [
-	        {"name" : "Username", "type" : "string"},
-	        {"name" : "Age", "type" : "int"},
-	        {"name" : "Address", "type" : ["null", {
-	            "type" : "record",
-	            "name" : "address_optional",
-	            "fields" : [
-	                {"name" : "street", "type" : ["null", "string"]},
-	                {"name" : "city", "type" : ["null", "string"]},
-	                {"name" : "country", "type" : ["null", "string"]},
-			{"name" : "zip", "type" : ["null", "string"]}
-	                ]
-		}], "default": "null"
-		}
-	    ]
-	}
-	`
+	schema := `{
+      "type": "record",
+      "name": "user_optional",
+      "namespace": "lbc",
+      "fields": [
+        {
+          "name": "Username",
+          "type": "string"
+        },
+        {
+          "name": "Age",
+          "type": "int"
+        },
+        {
+          "name": "Address",
+          "type": [
+            "null",
+            {
+              "type": "record",
+              "name": "address_optional",
+              "fields": [
+                {
+                  "name": "street",
+                  "type": ["null", "string"]
+                },
+                {
+                  "name": "city",
+                  "type": ["null", "string"]
+                },
+                {
+                  "name": "country",
+                  "type": ["null", "string"]
+                },
+                {
+                  "name": "zip",
+                  "type": ["null", "string"]
+                }
+              ]
+            }
+          ],
+          "default": "null"
+        }
+      ]
+    }`
 
 	codec, err := NewCodec(schema)
 	assert.NoError(t, err)
@@ -522,27 +598,49 @@ type UserOptional struct {
 }
 
 func TestUnionOptional_with_recursion(t *testing.T) {
-	schema := `
-	{
-	    "type" : "record",
-	    "name" : "user_optional",
-	    "fields" : [
-	        {"name" : "Username", "type" : "string"},
-	        {"name" : "Age", "type" : "int"},
-	        {"name" : "Address", "type" : ["null", {
-	            "type" : "record",
-	            "name" : "address_optional",
-	            "fields" : [
-	                {"name" : "street", "type" : ["null", "string"]},
-	                {"name" : "city", "type" : ["null", "string"]},
-	                {"name" : "country", "type" : ["null", "string"]},
-			{"name" : "zip", "type" : ["null", "string"]}
-	                ]
-		}], "default": "null"
-		}
-	    ]
-	}
-	`
+	schema := `{
+      "type": "record",
+      "name": "user_optional",
+      "fields": [
+        {
+          "name": "Username",
+          "type": "string"
+        },
+        {
+          "name": "Age",
+          "type": "int"
+        },
+        {
+          "name": "Address",
+          "type": [
+            "null",
+            {
+              "type": "record",
+              "name": "address_optional",
+              "fields": [
+                {
+                  "name": "street",
+                  "type": ["null", "string"]
+                },
+                {
+                  "name": "city",
+                  "type": ["null", "string"]
+                },
+                {
+                  "name": "country",
+                  "type": ["null", "string"]
+                },
+                {
+                  "name": "zip",
+                  "type": ["null", "string"]
+                }
+              ]
+            }
+          ],
+          "default": "null"
+        }
+      ]
+    }`
 
 	codec, err := NewCodec(schema)
 	assert.NoError(t, err)
@@ -561,28 +659,50 @@ func TestUnionOptional_with_recursion(t *testing.T) {
 }
 
 func TestUnionOptional_with_recursion_with_namespace(t *testing.T) {
-	schema := `
-	{
-	    "type" : "record",
-	    "name" : "UserOptional",
-	    "namespace" : "my.example",
-	    "fields" : [
-	        {"name" : "Username", "type" : "string"},
-	        {"name" : "Age", "type" : "int"},
-	        {"name" : "Address", "type" : ["null", {
-	            "type" : "record",
-	            "name" : "address_optional",
-	            "fields" : [
-	                {"name" : "street", "type" : ["null", "string"]},
-	                {"name" : "city", "type" : ["null", "string"]},
-	                {"name" : "country", "type" : ["null", "string"]},
-			{"name" : "zip", "type" : ["null", "string"]}
-	                ]
-		}], "default": "null"
-		}
-	    ]
-	}
-	`
+	schema := `{
+      "type": "record",
+      "name": "UserOptional",
+      "namespace": "my.example",
+      "fields": [
+        {
+          "name": "Username",
+          "type": "string"
+        },
+        {
+          "name": "Age",
+          "type": "int"
+        },
+        {
+          "name": "Address",
+          "type": [
+            "null",
+            {
+              "type": "record",
+              "name": "address_optional",
+              "fields": [
+                {
+                  "name": "street",
+                  "type": ["null", "string"]
+                },
+                {
+                  "name": "city",
+                  "type": ["null", "string"]
+                },
+                {
+                  "name": "country",
+                  "type": ["null", "string"]
+                },
+                {
+                  "name": "zip",
+                  "type": ["null", "string"]
+                }
+              ]
+            }
+          ],
+          "default": "null"
+        }
+      ]
+    }`
 
 	codec, err := NewCodec(schema)
 	assert.NoError(t, err)
@@ -612,23 +732,28 @@ type service struct {
 }
 
 func TestUnionOptional_in_array(t *testing.T) {
-	schema := `
-{
-  "type": "record",
-  "name": "action",
-  "fields": [
-    {"name": "services", "type": {
-      "type": "array",
-      "items": {
-        "type": "record",
-        "name": "service",
-        "fields": [
-          {"name": "quantity", "type": ["null", "int"]}
-        ]
-      }
-    }}
-  ]
-}`
+	schema := `{
+      "type": "record",
+      "name": "action",
+      "fields": [
+        {
+          "name": "services",
+          "type": {
+            "type": "array",
+            "items": {
+              "type": "record",
+              "name": "service",
+              "fields": [
+                {
+                  "name": "quantity",
+                  "type": ["null", "int"]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }`
 
 	codec, err := NewCodec(schema)
 	assert.NoError(t, err)
@@ -660,28 +785,30 @@ func TestUnionOptional_in_array(t *testing.T) {
 }
 
 func TestOptionalLongMarshaling(t *testing.T) {
-	schema := `
-	{
-		"type": "record",
-		"name": "action",
-		"namespace": "bidule",
-		"fields": [
-			{
-				"name": "Elements",
-				"type": {
-					"type": "array",
-					"items": {
-						"type": "record",
-						"namespace": "bidule.pouet",
-						"name": "Element",
-						"fields": [
-							{ "name": "TestLong", "type": ["null", "long"] }
-						]
-					}
-				}
-			}
-		]
-	}`
+	schema := `{
+      "type": "record",
+      "name": "action",
+      "namespace": "bidule",
+      "fields": [
+        {
+          "name": "Elements",
+          "type": {
+            "type": "array",
+            "items": {
+              "type": "record",
+              "namespace": "bidule.pouet",
+              "name": "Element",
+              "fields": [
+                {
+                  "name": "TestLong",
+                  "type": ["null", "long"]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }`
 
 	type Element struct {
 		TestLong *int64
@@ -732,37 +859,54 @@ type FakeData struct {
 }
 
 func TestCodec_Marshal_with_custom_name(t *testing.T) {
-	schema := `
-	{
-	    "type" : "record",
-	    "name" : "fake_data",
-	    "fields" : [
-			{
-				"name": "fake",
-				"type": {
-					"type": "record",
-					"name": "fake_urls",
-					"fields": [{"name": "url", "type": "string"}]
-				}
-			},
-			{
-				"name": "fake_img",
-				"type": {
-					"type": "record",
-					"name": "fake_imgs",
-					"fields": [{"name": "img", "type": "string"}]
-				}
-			},
-			{
-				"name": "fake_opt",
-				"type": ["null", {
-					"type": "record",
-					"name": "fake_urls",
-					"fields": [{"name": "url", "type": "string"}]
-				}]
-			}
-	    ]
-	}`
+	schema := `{
+      "type": "record",
+      "name": "fake_data",
+      "fields": [
+        {
+          "name": "fake",
+          "type": {
+            "type": "record",
+            "name": "fake_urls",
+            "fields": [
+              {
+                "name": "url",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fake_img",
+          "type": {
+            "type": "record",
+              "name": "fake_imgs",
+              "fields": [
+                {
+                  "name": "img",
+                  "type": "string"
+                }
+              ]
+            }
+        },
+        {
+          "name": "fake_opt",
+          "type": [
+            "null",
+            {
+              "type": "record",
+              "name": "fake_urls",
+              "fields": [
+                {
+                  "name": "url",
+                  "type": "string"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }`
 
 	codec, err := NewCodec(schema)
 	assert.NoError(t, err)
@@ -779,122 +923,107 @@ func TestCodec_Marshal_with_custom_name(t *testing.T) {
 	require.Equal(t, expected, decoded)
 }
 
-type UserTypeEnum string
+type MyEnum string
 
-type AuthentEvent struct {
-	UserID   string        `avro:"user_id"`
-	StoreID  int           `avro:"store_id"`
-	UserType *UserTypeEnum `avro:"user_type"`
+type UnionAndEnumEvent struct {
+	MyOptionalEnum *MyEnum `avro:"my_optional_enum"`
+	LongID         int     `avro:"long_id"`
+	StringID       string  `avro:"string_id"`
 }
 
 func TestCodec_Marshal_union_and_enum(t *testing.T) {
-	schema := `
-		{
-  "namespace": "leboncoin.authentication.events",
-  "type": "record",
-  "name": "authentication_event",
-  "doc": "Event emitted on user authentication or logout",
-  "fields": [
-    {
-      "name": "user_type",
-      "type":[
-			"null",
-          {
-            "type": "enum",
-            "name": "user_type_enum",
-            "symbols": ["private", "pro"]
-          }
-      ],
-      "doc": "the type of the user"
-    },
-    {
-      "name": "store_id",
-      "type": "long",
-      "doc": "ID of the user (in blocketdb)"
-    },
-    {
-      "name": "user_id",
-      "type": "string",
-      "doc": "A globally unique (across systems) user identifier ID (UUID)"
-    }
-  ]
-}
-`
+	schema := `{
+      "type": "record",
+      "name": "parent",
+      "fields": [
+        {
+          "name": "my_optional_enum",
+          "type": [
+            "null",
+            {
+              "type": "enum",
+              "name": "my_enum",
+              "symbols": ["value1", "value2"]
+            }
+          ]
+        },
+        {
+          "name": "long_id",
+          "type": "long"
+        },
+        {
+          "name": "string_id",
+          "type": "string"
+        }
+      ]
+    }`
 
 	codec, err := NewCodec(schema)
 	assert.NoError(t, err)
 
-	expected := AuthentEvent{UserID: "user", StoreID: 64, UserType: func(s string) *UserTypeEnum {
-		tmp := UserTypeEnum(s)
-		return &tmp
-	}("pro"),
+	expected := UnionAndEnumEvent{
+		MyOptionalEnum: func(s string) *MyEnum {
+			tmp := MyEnum(s)
+			return &tmp
+		}("value1"),
+		StringID: "user",
+		LongID:   64,
 	}
-	var decoded AuthentEvent
 
 	avro, err := codec.Marshal(expected)
 	require.NoError(t, err)
 
+	var decoded UnionAndEnumEvent
 	err = codec.Unmarshal(avro, &decoded)
 	require.NoError(t, err)
-
 	require.Equal(t, expected, decoded)
 }
 
-type AuthentEventEnum struct {
-	UserID   string       `avro:"user_id"`
-	StoreID  int          `avro:"store_id"`
-	UserType UserTypeEnum `avro:"user_type"`
+type EnumEvent struct {
+	MyRequiredEnum MyEnum `avro:"my_required_enum"`
+	LongID         int    `avro:"long_id"`
+	StringID       string `avro:"string_id"`
 }
 
 func TestCodec_Marshal_enum(t *testing.T) {
-	schema := `
-		{
-  "namespace": "leboncoin.authentication.events",
-  "type": "record",
-  "name": "authentication_event",
-  "doc": "Event emitted on user authentication or logout",
-  "fields": [
-    {
-      "name": "user_type",
-      "type":
-          {
+	schema := `{
+      "type": "record",
+      "name": "authentication_event",
+      "fields": [
+        {
+          "name": "my_required_enum",
+          "type": {
             "type": "enum",
-            "name": "user_type_enum",
-            "symbols": ["private", "pro"]
+            "name": "my_enum",
+            "symbols": ["value1", "value2"]
           }
-      ,
-      "doc": "the type of the user"
-    },
-    {
-      "name": "store_id",
-      "type": "long",
-      "doc": "ID of the user (in blocketdb)"
-    },
-    {
-      "name": "user_id",
-      "type": "string",
-      "doc": "A globally unique (across systems) user identifier ID (UUID)"
-    }
-  ]
-}
-`
+        },
+        {
+          "name": "long_id",
+          "type": "long"
+        },
+        {
+          "name": "string_id",
+          "type": "string"
+        }
+      ]
+    }`
 
 	codec, err := NewCodec(schema)
 	assert.NoError(t, err)
 
-	expected := AuthentEventEnum{UserID: "user", StoreID: 64, UserType: func(s string) UserTypeEnum {
-		tmp := UserTypeEnum(s)
-		return tmp
-	}("pro"),
+	expected := EnumEvent{
+		MyRequiredEnum: MyEnum("value1"),
+		StringID:       "user",
+		LongID:         64,
 	}
-	var decoded AuthentEventEnum
 
 	avro, err := codec.Marshal(expected)
 	require.NoError(t, err)
 
+	var decoded EnumEvent
 	err = codec.Unmarshal(avro, &decoded)
 	require.NoError(t, err)
-
 	require.Equal(t, expected, decoded)
 }
 
