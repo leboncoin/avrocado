@@ -140,9 +140,8 @@ func TestStructureWithDifferentTypes(t *testing.T) {
 
 	assert.Equal(t, expected, decoded)
 
-	// XXX nil bytes are converted to an empty slice
 	val := MyStruct{}
-	expected = MyStruct{MyBytes: []byte{}}
+	expected = MyStruct{}
 	avro, err = codec.Marshal(&val)
 	assert.NoError(t, err)
 
@@ -1028,6 +1027,57 @@ func TestCodec_Marshal_enum(t *testing.T) {
 }
 
 func TestCodec_Marshal_struct_with_union(t *testing.T) {
+	schema := `{
+      "type": "record",
+      "name": "event",
+      "fields": [
+        {
+          "name": "my_struct",
+          "type": {
+            "type": "record",
+            "name": "my_struct_record",
+            "fields": [
+              {
+                "name": "optional_string_id",
+                "type": ["null", "string"],
+                "default": null
+              }
+            ]
+          }
+        }
+      ]
+    }`
+
+	codec, err := NewCodec(schema)
+	require.NoError(t, err)
+
+	type MyStruct struct {
+		OptionalStringID *string `avro:"optional_string_id"`
+	}
+
+	type StructEvent struct {
+		MyStruct MyStruct `avro:"my_struct"`
+	}
+
+	expected := StructEvent{
+		MyStruct: MyStruct{
+			OptionalStringID: func(s string) *string {
+				return &s
+			}("foo"),
+		},
+	}
+
+	avro, err := codec.Marshal(expected)
+	if assert.NoError(t, err) {
+		var decoded StructEvent
+
+		err = codec.Unmarshal(avro, &decoded)
+		assert.NoError(t, err)
+		assert.Equal(t, expected, decoded)
+	}
+}
+
+func TestCodec_Marshal_struct_with_union_different_union(t *testing.T) {
 	schema := `{
       "type": "record",
       "name": "event",
