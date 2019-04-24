@@ -1,0 +1,40 @@
+{
+    "name": "User",
+    "namespace": "my.example",
+    "type": "record",
+    "fields": [
+        {
+            "name": "username",
+            "type": "string"
+        },
+        {
+            "name": "age",
+            "type": "int"
+        },
+        {
+            "name": "address",
+            "type": {
+                "name": "mailing_address",
+                "type": "record",
+                "fields": [
+                    {
+                        "name": "street",
+                        "type": "string"
+                    },
+                    {
+                        "name": "city",
+                        "type": "string"
+                    },
+                    {
+                        "name": "country",
+                        "type": "string"
+                    },
+                    {
+                        "name": "zip",
+                        "type": "string"
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "name": "parent",
+    "type": "record",
+    "fields": [
+        {
+            "name": "my_optional_enum",
+            "type": [
+                "null",
+                {
+                    "name": "my_enum",
+                    "type": "enum",
+                    "symbols": [
+                        "value1",
+                        "value2"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "long_id",
+            "type": "long"
+        },
+        {
+            "name": "string_id",
+            "type": "string"
+        }
+    ]
+}

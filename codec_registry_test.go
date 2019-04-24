@@ -11,6 +11,11 @@ import (
 
 var Registry SchemaRegistry
 
+type Person struct {
+	Name string `avro:"name"`
+	Age  int32  `avro:"age"`
+}
+
 func NewMockCodecRegistry(subject string) *CodecRegistry {
 	if Registry == nil {
 		if os.Getenv("GO_INTEGRATION_TESTS") != "1" {

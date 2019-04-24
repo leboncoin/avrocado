@@ -1,0 +1,22 @@
+{
+    "type": "record",
+    "name": "authentication_event",
+    "fields": [
+      {
+        "name": "my_required_enum",
+        "type": {
+          "type": "enum",
+          "name": "my_enum",
+          "symbols": ["value1", "value2"]
+        }
+      },
+      {
+        "name": "long_id",
+        "type": "long"
+      },
+      {
+        "name": "string_id",
+        "type": "string"
+      }
+    ]
+  }

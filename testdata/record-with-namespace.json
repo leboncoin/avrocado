@@ -1,0 +1,21 @@
+{
+    "name": "Person",
+    "namespace": "lbc",
+    "type": "record",
+    "fields": [
+        {
+            "name": "Name",
+            "type": [
+                "null",
+                "string"
+            ],
+            "default": "null"
+        }, {
+            "name": "Age",
+            "type": [
+                "null",
+                "int"
+            ]
+        }
+    ]
+}

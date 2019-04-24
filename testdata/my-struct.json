@@ -1,0 +1,38 @@
+{
+    "name": "MyStruct",
+    "type": "record",
+    "fields": [
+        {
+            "name": "MyNull",
+            "type": "null"
+        },
+        {
+            "name": "MyBool",
+            "type": "boolean"
+        },
+        {
+            "name": "MyInt",
+            "type": "int"
+        },
+        {
+            "name": "MyLong",
+            "type": "long"
+        },
+        {
+            "name": "MyFloat",
+            "type": "float"
+        },
+        {
+            "name": "MyDouble",
+            "type": "double"
+        },
+        {
+            "name": "MyBytes",
+            "type": "bytes"
+        },
+        {
+            "name": "MyString",
+            "type": "string"
+        }
+    ]
+}

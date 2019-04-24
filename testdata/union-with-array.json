@@ -1,0 +1,25 @@
+{
+    "name": "order",
+    "type": "record",
+    "fields": [
+        {
+            "name": "services",
+            "type": {
+                "type": "array",
+                "items": {
+                    "name": "service",
+                    "type": "record",
+                    "fields": [
+                        {
+                            "name": "quantity",
+                            "type": [
+                                "null",
+                                "int"
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

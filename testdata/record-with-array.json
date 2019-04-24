@@ -1,0 +1,27 @@
+{
+    "name": "subarray",
+    "namespace": "bidule",
+    "type": "record",
+    "fields": [
+        {
+            "name": "Elements",
+            "type": {
+                "type": "array",
+                "items": {
+                    "name": "element",
+                    "namespace": "foo.bar",
+                    "type": "record",
+                    "fields": [
+                        {
+                            "name": "TestLong",
+                            "type": [
+                                "null",
+                                "long"
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

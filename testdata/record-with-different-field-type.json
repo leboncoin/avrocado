@@ -1,0 +1,48 @@
+{
+    "name": "fake_data",
+    "type": "record",
+    "fields": [
+        {
+            "name": "fake",
+            "type": {
+                "name": "fake_urls",
+                "type": "record",
+                "fields": [
+                    {
+                        "name": "url",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "fake_img",
+            "type": {
+                "name": "fake_imgs",
+                "type": "record",
+                "fields": [
+                    {
+                        "name": "img",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "fake_opt",
+            "type": [
+                "null",
+                {
+                    "name": "fake_urls",
+                    "type": "record",
+                    "fields": [
+                        {
+                            "name": "url",
+                            "type": "string"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

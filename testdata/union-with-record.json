@@ -1,0 +1,56 @@
+{
+    "name": "Person",
+    "namespace": "lbc",
+    "type": "record",
+    "fields": [
+        {
+            "name": "Name",
+            "type": "string"
+        },
+        {
+            "name": "Age",
+            "type": "int"
+        },
+        {
+            "name": "Address",
+            "type": [
+                "null",
+                {
+                    "name": "address_optional",
+                    "type": "record",
+                    "fields": [
+                        {
+                            "name": "street",
+                            "type": [
+                                "null",
+                                "string"
+                            ]
+                        },
+                        {
+                            "name": "city",
+                            "type": [
+                                "null",
+                                "string"
+                            ]
+                        },
+                        {
+                            "name": "country",
+                            "type": [
+                                "null",
+                                "string"
+                            ]
+                        },
+                        {
+                            "name": "zip",
+                            "type": [
+                                "null",
+                                "string"
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "default": "null"
+        }
+    ]
+}

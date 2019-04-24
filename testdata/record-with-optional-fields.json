@@ -1,0 +1,30 @@
+{
+    "name": "Person",
+    "type": "record",
+    "fields": [
+        {
+            "name": "Age",
+            "type": [
+                "null",
+                "int",
+                "long"
+            ]
+        },
+        {
+            "name": "Name",
+            "type": [
+                "null",
+                "string"
+            ],
+            "default": "null"
+        },
+        {
+            "name": "Married",
+            "type": [
+                "null",
+                "boolean"
+            ],
+            "default": "null"
+        }
+    ]
+}

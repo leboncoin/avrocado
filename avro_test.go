@@ -1,7 +1,10 @@
 package avro
 
 import (
+	"io/ioutil"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"testing"
 
 	"github.com/linkedin/goavro"
@@ -9,11 +12,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A simple test of Marshaling/Unmarshaling
+var (
+	// testdataDirpath is the full path of the testdata directory
+	// inside this Go module directory.
+	testdataDirpath string
+)
 
-type Person struct {
-	Name string `avro:"name"`
-	Age  int32  `avro:"age"`
+func init() {
+	_, modFilePath, _, _ := runtime.Caller(0)
+	modDirPath := filepath.Dir(modFilePath)
+	testdataDirpath = filepath.Join(modDirPath, "testdata")
+}
+
+func readAvroSchemaFromFile(t *testing.T, location string) *Codec {
+	t.Helper()
+
+	filePath := filepath.Join(testdataDirpath, location)
+
+	schema, err := ioutil.ReadFile(filePath)
+	require.NoError(t, err)
+
+	codec, err := NewCodec(string(schema))
+	require.NoError(t, err)
+
+	return codec
 }
 
 func TestAddNamespace(t *testing.T) {
@@ -37,32 +59,20 @@ func TestDefaultTypeNameEncoder(t *testing.T) {
 }
 
 func TestAvroCodec(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "Person",
-      "fields": [
-        {
-          "name": "name",
-          "type": "string"
-        }, {
-          "name": "age",
-          "type": "int"
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "simple-record.json")
+
+	type Person struct {
+		Name string `avro:"name"`
+		Age  int32  `avro:"age"`
+	}
 
 	val := Person{"Nico", 36}
-	var decoded Person
-
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
-
 	avro, err := codec.Marshal(&val)
 	assert.NoError(t, err)
 
+	var decoded Person
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
-
 	assert.Equal(t, decoded, val)
 
 	// Test with map[string]interface{}
@@ -73,49 +83,19 @@ func TestAvroCodec(t *testing.T) {
 	assert.Equal(t, int32(36), decodedMap["age"])
 }
 
-type MyStruct struct {
-	MyNull   interface{}
-	MyBool   bool
-	MyInt    int
-	MyLong   int64
-	MyFloat  float32
-	MyDouble float64
-	MyBytes  []byte
-	MyString string
-}
-
 func TestStructureWithDifferentTypes(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "MyStruct",
-      "fields": [
-        {
-          "name": "MyNull",
-          "type": "null"
-        }, {
-          "name": "MyBool",
-          "type": "boolean"
-        }, {
-          "name": "MyInt",
-          "type": "int"
-        }, {
-          "name": "MyLong",
-          "type": "long"
-        }, {
-          "name": "MyFloat",
-          "type": "float"
-        }, {
-          "name": "MyDouble",
-          "type": "double"
-        }, {
-          "name": "MyBytes",
-          "type": "bytes"
-        }, {
-          "name": "MyString",
-          "type": "string"
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "my-struct.json")
+
+	type MyStruct struct {
+		MyNull   interface{}
+		MyBool   bool
+		MyInt    int
+		MyLong   int64
+		MyFloat  float32
+		MyDouble float64
+		MyBytes  []byte
+		MyString string
+	}
 
 	expected := MyStruct{
 		MyNull:   nil,
@@ -127,17 +107,13 @@ func TestStructureWithDifferentTypes(t *testing.T) {
 		MyBytes:  []byte{'a', 'b'},
 		MyString: "hello",
 	}
-	var decoded MyStruct
-
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
 
 	avro, err := codec.Marshal(&expected)
 	assert.NoError(t, err)
 
+	var decoded MyStruct
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
-
 	assert.Equal(t, expected, decoded)
 
 	// XXX nil bytes are converted to an empty slice
@@ -149,116 +125,54 @@ func TestStructureWithDifferentTypes(t *testing.T) {
 	var decoded2 MyStruct
 	err = codec.Unmarshal(avro, &decoded2)
 	assert.NoError(t, err)
-
 	assert.Equal(t, expected, decoded2)
 }
 
-type Child struct {
-	Name string `avro:"name"`
-}
-
-type Parent struct {
-	Children []Child `avro:"children"`
-}
-
 func TestArray(t *testing.T) {
-	schema := `{
-      "name": "Parent",
-      "type": "record",
-      "fields": [
-        {
-          "name": "children",
-          "type": {
-            "type": "array",
-            "items": {
-              "name": "Child",
-              "type": "record",
-              "fields": [
-                {
-                  "name": "name",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "array.json")
 
-	expected := Parent{[]Child{{"Riri"}, {"Fifi"}, {"Loulou"}}}
-	var decoded Parent
+	type Child struct {
+		Name string `avro:"name"`
+	}
 
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	type Parent struct {
+		Children []Child `avro:"children"`
+	}
+
+	expected := Parent{
+		Children: []Child{
+			{Name: "Riri"},
+			{Name: "Fifi"},
+			{Name: "Loulou"},
+		},
+	}
 
 	avro, err := codec.Marshal(&expected)
 	assert.NoError(t, err)
 
+	var decoded Parent
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expected, decoded)
-
-}
-
-type Address struct {
-	Street  string `avro:"street"`
-	City    string `avro:"city"`
-	Country string `avro:"country"`
-	Zip     string `avro:"zip"`
-}
-
-type User struct {
-	Username string  `avro:"username"`
-	Age      int     `avro:"age"`
-	Address  Address `avro:"address"`
 }
 
 func TestSubStructures(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "User",
-      "namespace": "my.example",
-      "fields": [
-        {
-          "name": "username",
-          "type": "string"
-        },
-        {
-          "name": "age",
-          "type": "int"
-        },
-        {
-          "name": "address",
-          "type": {
-            "type": "record",
-            "name": "mailing_address",
-            "fields": [
-              {
-                "name": "street",
-                "type": "string"},
-              {
-                "name": "city",
-                "type": "string"
-              },
-              {
-                "name": "country",
-                "type": "string"
-              },
-              {
-                "name": "zip",
-                "type": "string"
-              }
-            ]
-          }
-        }
-      ]
-    }`
-
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
-
+	codec := readAvroSchemaFromFile(t, "sub-structs.json")
 	assert.Equal(t, codec.Namespace, "my.example")
+
+	type Address struct {
+		Street  string `avro:"street"`
+		City    string `avro:"city"`
+		Country string `avro:"country"`
+		Zip     string `avro:"zip"`
+	}
+
+	type User struct {
+		Username string  `avro:"username"`
+		Age      int     `avro:"age"`
+		Address  Address `avro:"address"`
+	}
 
 	expected := User{
 		Username: "Joe l'embrouille",
@@ -270,570 +184,328 @@ func TestSubStructures(t *testing.T) {
 			Zip:     "75460",
 		},
 	}
-	var decoded User
 
 	avro, err := codec.Marshal(&expected)
 	assert.NoError(t, err)
 
+	var decoded User
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
-
 	assert.Equal(t, expected, decoded)
-}
-
-type UserInfo struct {
-	Age int `avro:"age"`
 }
 
 func TestDefaultValues(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "userInfo",
-      "namespace": "my.example",
-      "fields": [
-        {
-          "name": "age",
-          "type": "int",
-          "default": -1
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "simple-record-with-default-age.json")
 
-	expected := UserInfo{Age: 3}
-	var decoded UserInfo
+	type Person struct {
+		Age int `avro:"age"`
+	}
 
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	expected := Person{
+		Age: 3,
+	}
 
 	avro, err := codec.Marshal(&expected)
 	assert.NoError(t, err)
 
+	var decoded Person
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
-
 	assert.Equal(t, expected, decoded)
 
 	// Marshaling a default value results in a mostly empty string
-	expected = UserInfo{Age: -1}
-
-	avro, err = codec.Marshal(&expected)
+	avro, err = codec.Marshal(&Person{
+		Age: -1,
+	})
 	assert.NoError(t, err)
 	assert.Equal(t, avro, []byte{0x1})
 }
 
 // go structure with more fields than avro structure
 
-type UserData struct {
-	Name string `avro:"name"`
-	Age  int    `avro:"age"`
-}
-
 func TestGoStructureWithMoreFields(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "userInfo",
-      "namespace": "my.example",
-      "fields": [
-        {
-          "name": "age",
-          "type": "int"
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "simple-record-without-name.json")
 
-	// The field missing in avro is lost
-	expected := UserData{"", 1}
-	val := UserData{"Guillaume", 1}
-	var decoded UserData
+	type Person struct {
+		Name string `avro:"name"`
+		Age  int    `avro:"age"`
+	}
 
-	codec, err := NewCodec(schema)
+	avro, err := codec.Marshal(&Person{
+		Name: "Guillaume",
+		Age:  1,
+	})
 	assert.NoError(t, err)
 
-	avro, err := codec.Marshal(&val)
-	assert.NoError(t, err)
-
+	var decoded Person
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
 
-	assert.Equal(t, expected, decoded)
-
+	// The field missing in avro is lost
+	assert.Equal(t, Person{
+		Name: "",
+		Age:  1,
+	}, decoded)
 }
 
 func TestAvroStructureWithMoreFields(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "userData",
-      "namespace": "my.example",
-      "fields": [
-        {
-          "name": "age",
-          "type": "int"
-        },
-        {
-          "name": "name",
-          "type": "string"
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "simple-record.json")
 
-	expected := UserInfo{1}
-
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	type Person struct {
+		Age int `avro:"age"`
+	}
 
 	// It fails since there is no default value for name
-	_, err = codec.Marshal(&expected)
+	_, err := codec.Marshal(&Person{
+		Age: 1,
+	})
 	assert.Error(t, err)
 }
 
 func TestAvroStructureWithMoreFieldsWithDefaultValue(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "userData",
-      "namespace": "my.example",
-      "fields": [
-        {
-          "name": "age",
-          "type": "int"
-        },
-        {
-          "name": "name",
-          "type": "string",
-          "default": ""
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "simple-record-with-default-name.json")
 
-	expected := UserInfo{1}
-	var decoded UserInfo
+	type Person struct {
+		Age int `avro:"age"`
+	}
 
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	expected := Person{
+		Age: 1,
+	}
 
 	avro, err := codec.Marshal(&expected)
 	assert.NoError(t, err)
 
+	var decoded Person
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
-
 	assert.Equal(t, expected, decoded)
 }
 
 func TestUnion(t *testing.T) {
-	schema := `["null","string","int"]`
-
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	codec := readAvroSchemaFromFile(t, "union.json")
 
 	expected := goavro.Union("string", "testo")
-	var decoded map[string]interface{}
 
 	avro, err := codec.Marshal(expected)
 	assert.NoError(t, err)
 
+	var decoded map[string]interface{}
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
-
 	assert.Equal(t, expected, decoded)
 }
 
-type UserDataOptional struct {
-	Name    *string
-	Age     *int
-	Married *bool
-}
-
 func TestUnionOptional(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "userDataOptional",
-      "namespace": "my.example",
-      "fields": [
-        {
-          "name": "Age",
-          "type": ["null", "int", "long"]
-        },
-        {
-          "name": "Name",
-          "type": ["null", "string"],
-          "default": "null"
-        },
-        {
-          "name": "Married",
-          "type": ["null", "boolean"],
-          "default": "null"
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "record-with-optional-fields.json")
 
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	type Person struct {
+		Name    *string
+		Age     *int
+		Married *bool
+	}
 
 	name := "MyName"
 	age := int(42)
 	married := true
-	expected := UserDataOptional{Name: &name, Age: &age, Married: &married}
-
-	var decoded UserDataOptional
+	expected := Person{
+		Name:    &name,
+		Age:     &age,
+		Married: &married,
+	}
 
 	avro, err := codec.Marshal(expected)
 	assert.NoError(t, err)
 
+	var decoded Person
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
-
 	assert.Equal(t, expected, decoded)
 }
 
-func TestCodecRegistry_Marshal_with_namespace(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "userDataOptional",
-      "namespace": "lbc",
-      "fields": [
-        {
-          "name": "Age",
-          "type": ["null", "int"]
-        },
-        {
-          "name": "Name",
-          "type": ["null", "string"],
-          "default": "null"
-        }
-      ]
-    }`
+func TestRecordWithNamespace(t *testing.T) {
+	codec := readAvroSchemaFromFile(t, "record-with-namespace.json")
+	assert.Equal(t, codec.Namespace, "lbc")
 
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	type Person struct {
+		Name *string
+		Age  *int
+	}
 
 	name := "MyName"
-	codec.Namespace = "lbc"
-	expected := UserDataOptional{Name: &name, Age: nil}
-
-	var decoded UserDataOptional
+	expected := Person{
+		Name: &name,
+		Age:  nil,
+	}
 
 	avro, err := codec.Marshal(expected)
 	assert.NoError(t, err)
 
+	var decoded Person
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
-
 	assert.Equal(t, expected, decoded)
 }
 
 func TestUnionOptional_with_nil_value(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "user_optional",
-      "namespace": "lbc",
-      "fields": [
-        {
-          "name": "Username",
-          "type": "string"
-        },
-        {
-          "name": "Age",
-          "type": "int"
-        },
-        {
-          "name": "Address",
-          "type": [
-            "null",
-            {
-              "type": "record",
-              "name": "address_optional",
-              "fields": [
-                {
-                  "name": "street",
-                  "type": ["null", "string"]
-                },
-                {
-                  "name": "city",
-                  "type": ["null", "string"]
-                },
-                {
-                  "name": "country",
-                  "type": ["null", "string"]
-                },
-                {
-                  "name": "zip",
-                  "type": ["null", "string"]
-                }
-              ]
-            }
-          ],
-          "default": "null"
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "union-with-record.json")
 
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	type AddressOptional struct {
+		Street  *string `avro:"street"`
+		City    *string `avro:"city"`
+		Country *string `avro:"country"`
+		Zip     *string `avro:"zip"`
+	}
 
-	expected := UserOptional{Username: "Alan Turing", Age: 45, Address: AddressOptional{}}
+	type Person struct {
+		Name    string
+		Age     int
+		Address AddressOptional `avro:",omitempty"`
+	}
 
-	var decoded UserOptional
+	expected := Person{
+		Name:    "Alan Turing",
+		Age:     45,
+		Address: AddressOptional{},
+	}
 
-	codec.Namespace = "lbc"
 	avro, err := codec.Marshal(expected)
 	assert.NoError(t, err)
 
+	var decoded Person
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
-
 	assert.Equal(t, expected, decoded)
 }
 
-type AddressOptional struct {
-	Street  *string `avro:"street"`
-	City    *string `avro:"city"`
-	Country *string `avro:"country"`
-	Zip     *string `avro:"zip"`
-}
-
-type UserOptional struct {
-	Username string
-	Age      int
-	Address  AddressOptional `avro:",omitempty"`
-}
-
 func TestUnionOptional_with_recursion(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "user_optional",
-      "fields": [
-        {
-          "name": "Username",
-          "type": "string"
-        },
-        {
-          "name": "Age",
-          "type": "int"
-        },
-        {
-          "name": "Address",
-          "type": [
-            "null",
-            {
-              "type": "record",
-              "name": "address_optional",
-              "fields": [
-                {
-                  "name": "street",
-                  "type": ["null", "string"]
-                },
-                {
-                  "name": "city",
-                  "type": ["null", "string"]
-                },
-                {
-                  "name": "country",
-                  "type": ["null", "string"]
-                },
-                {
-                  "name": "zip",
-                  "type": ["null", "string"]
-                }
-              ]
-            }
-          ],
-          "default": "null"
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "union-with-record.json")
 
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	type AddressOptional struct {
+		Street  *string `avro:"street"`
+		City    *string `avro:"city"`
+		Country *string `avro:"country"`
+		Zip     *string `avro:"zip"`
+	}
 
-	expected := UserOptional{Username: "Alan Turing", Age: 45, Address: AddressOptional{}}
+	type Person struct {
+		Name    string
+		Age     int
+		Address AddressOptional `avro:",omitempty"`
+	}
 
-	var decoded UserOptional
+	expected := Person{
+		Name:    "Alan Turing",
+		Age:     45,
+		Address: AddressOptional{},
+	}
 
 	avro, err := codec.Marshal(expected)
 	assert.NoError(t, err)
 
+	var decoded Person
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
-
 	assert.Equal(t, expected, decoded)
 }
 
 func TestUnionOptional_with_recursion_with_namespace(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "UserOptional",
-      "namespace": "my.example",
-      "fields": [
-        {
-          "name": "Username",
-          "type": "string"
-        },
-        {
-          "name": "Age",
-          "type": "int"
-        },
-        {
-          "name": "Address",
-          "type": [
-            "null",
-            {
-              "type": "record",
-              "name": "address_optional",
-              "fields": [
-                {
-                  "name": "street",
-                  "type": ["null", "string"]
-                },
-                {
-                  "name": "city",
-                  "type": ["null", "string"]
-                },
-                {
-                  "name": "country",
-                  "type": ["null", "string"]
-                },
-                {
-                  "name": "zip",
-                  "type": ["null", "string"]
-                }
-              ]
-            }
-          ],
-          "default": "null"
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "union-with-record.json")
 
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	type AddressOptional struct {
+		Street  *string `avro:"street"`
+		City    *string `avro:"city"`
+		Country *string `avro:"country"`
+		Zip     *string `avro:"zip"`
+	}
 
-	//address := AddressOptional{}
+	type Person struct {
+		Name    string
+		Age     int
+		Address AddressOptional `avro:",omitempty"`
+	}
 
-	//street := "my street"
-	expected := UserOptional{Username: "Alan Turing", Age: 45}
-
-	var decoded UserOptional
+	expected := Person{
+		Name: "Alan Turing",
+		Age:  45,
+	}
 
 	avro, err := codec.Marshal(expected)
 	assert.NoError(t, err)
 
+	var decoded Person
 	err = codec.Unmarshal(avro, &decoded)
 	assert.NoError(t, err)
-
 	assert.Equal(t, expected, decoded)
 }
 
-type order struct {
-	Services []service `avro:"services"`
-}
-
-type service struct {
-	Quantity *int32 `avro:"quantity,optional"`
-}
-
 func TestUnionOptional_in_array(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "action",
-      "fields": [
-        {
-          "name": "services",
-          "type": {
-            "type": "array",
-            "items": {
-              "type": "record",
-              "name": "service",
-              "fields": [
-                {
-                  "name": "quantity",
-                  "type": ["null", "int"]
-                }
-              ]
-            }
-          }
-        }
-      ]
-    }`
-
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	codec := readAvroSchemaFromFile(t, "union-with-array.json")
 
 	quantity := int32(1)
 
-	tests := []struct {
-		name     string
-		expected *order
-	}{
-		{"value", &order{Services: []service{{Quantity: &quantity}}}},
-		{"nil", &order{Services: []service{{Quantity: nil}}}},
+	type service struct {
+		Quantity *int32 `avro:"quantity,optional"`
 	}
 
-	for _, tt := range tests {
-		var decoded order
+	type order struct {
+		Services []service `avro:"services"`
+	}
 
-		t.Run(tt.name, func(t *testing.T) {
-			avro, err := codec.Marshal(tt.expected)
+	for testName, expected := range map[string]order{
+		"value": {
+			Services: []service{
+				{
+					Quantity: &quantity,
+				},
+			},
+		},
+		"nil": {
+			Services: []service{
+				{
+					Quantity: nil,
+				},
+			},
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			avro, err := codec.Marshal(&expected)
 			require.NoError(t, err)
 
+			var decoded order
 			err = codec.Unmarshal(avro, &decoded)
 			require.NoError(t, err)
 
 			require.Len(t, decoded.Services, 1)
-			assert.EqualValues(t, tt.expected.Services[0], decoded.Services[0])
+			assert.EqualValues(t, expected.Services[0], decoded.Services[0])
 		})
 	}
 }
 
 func TestOptionalLongMarshaling(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "action",
-      "namespace": "bidule",
-      "fields": [
-        {
-          "name": "Elements",
-          "type": {
-            "type": "array",
-            "items": {
-              "type": "record",
-              "namespace": "bidule.pouet",
-              "name": "Element",
-              "fields": [
-                {
-                  "name": "TestLong",
-                  "type": ["null", "long"]
-                }
-              ]
-            }
-          }
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "record-with-array.json")
 
-	type Element struct {
+	type element struct {
 		TestLong *int64
 	}
 
 	type subarray struct {
-		Elements []Element
+		Elements []element
 	}
-
-	a := require.New(t)
-	codec, err := NewCodec(schema)
-	a.NoError(err)
-	a.NotNil(codec)
 
 	ptrField := int64(1234)
 
 	val := subarray{
-		Elements: []Element{
-			{TestLong: &ptrField},
+		Elements: []element{
+			{
+				TestLong: &ptrField,
+			},
 			{},
 		},
 	}
 
-	_, err = codec.Marshal(val)
-	a.NoError(err)
+	_, err := codec.Marshal(val)
+	assert.NoError(t, err)
 }
 
 type FakeURLs struct {
@@ -859,107 +531,39 @@ type FakeData struct {
 }
 
 func TestCodec_Marshal_with_custom_name(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "fake_data",
-      "fields": [
-        {
-          "name": "fake",
-          "type": {
-            "type": "record",
-            "name": "fake_urls",
-            "fields": [
-              {
-                "name": "url",
-                "type": "string"
-              }
-            ]
-          }
-        },
-        {
-          "name": "fake_img",
-          "type": {
-            "type": "record",
-              "name": "fake_imgs",
-              "fields": [
-                {
-                  "name": "img",
-                  "type": "string"
-                }
-              ]
-            }
-        },
-        {
-          "name": "fake_opt",
-          "type": [
-            "null",
-            {
-              "type": "record",
-              "name": "fake_urls",
-              "fields": [
-                {
-                  "name": "url",
-                  "type": "string"
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "record-with-different-field-type.json")
 
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
-
-	expected := FakeData{FakeURLs{"test"}, FakeIMGs{"img"}, &FakeURLs{"test2"}}
-	var decoded FakeData
+	expected := FakeData{
+		Fake: FakeURLs{
+			URL: "test",
+		},
+		FakeImg: FakeIMGs{
+			Img: "img",
+		},
+		FakeOptional: &FakeURLs{
+			URL: "test2",
+		},
+	}
 
 	avro, err := codec.Marshal(expected)
 	require.NoError(t, err)
 
+	var decoded FakeData
 	err = codec.Unmarshal(avro, &decoded)
 	require.NoError(t, err)
-
 	require.Equal(t, expected, decoded)
 }
 
-type MyEnum string
-
-type UnionAndEnumEvent struct {
-	MyOptionalEnum *MyEnum `avro:"my_optional_enum"`
-	LongID         int     `avro:"long_id"`
-	StringID       string  `avro:"string_id"`
-}
-
 func TestCodec_Marshal_union_and_enum(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "parent",
-      "fields": [
-        {
-          "name": "my_optional_enum",
-          "type": [
-            "null",
-            {
-              "type": "enum",
-              "name": "my_enum",
-              "symbols": ["value1", "value2"]
-            }
-          ]
-        },
-        {
-          "name": "long_id",
-          "type": "long"
-        },
-        {
-          "name": "string_id",
-          "type": "string"
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "union-with-enum.json")
 
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	type MyEnum string
+
+	type UnionAndEnumEvent struct {
+		MyOptionalEnum *MyEnum `avro:"my_optional_enum"`
+		LongID         int     `avro:"long_id"`
+		StringID       string  `avro:"string_id"`
+	}
 
 	expected := UnionAndEnumEvent{
 		MyOptionalEnum: func(s string) *MyEnum {
@@ -979,38 +583,16 @@ func TestCodec_Marshal_union_and_enum(t *testing.T) {
 	require.Equal(t, expected, decoded)
 }
 
-type EnumEvent struct {
-	MyRequiredEnum MyEnum `avro:"my_required_enum"`
-	LongID         int    `avro:"long_id"`
-	StringID       string `avro:"string_id"`
-}
-
 func TestCodec_Marshal_enum(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "authentication_event",
-      "fields": [
-        {
-          "name": "my_required_enum",
-          "type": {
-            "type": "enum",
-            "name": "my_enum",
-            "symbols": ["value1", "value2"]
-          }
-        },
-        {
-          "name": "long_id",
-          "type": "long"
-        },
-        {
-          "name": "string_id",
-          "type": "string"
-        }
-      ]
-    }`
+	codec := readAvroSchemaFromFile(t, "record-with-enum.json")
 
-	codec, err := NewCodec(schema)
-	assert.NoError(t, err)
+	type MyEnum string
+
+	type EnumEvent struct {
+		MyRequiredEnum MyEnum `avro:"my_required_enum"`
+		LongID         int    `avro:"long_id"`
+		StringID       string `avro:"string_id"`
+	}
 
 	expected := EnumEvent{
 		MyRequiredEnum: MyEnum("value1"),
@@ -1028,29 +610,7 @@ func TestCodec_Marshal_enum(t *testing.T) {
 }
 
 func TestCodec_Marshal_struct_with_union(t *testing.T) {
-	schema := `{
-      "type": "record",
-      "name": "event",
-      "fields": [
-        {
-          "name": "my_struct",
-          "type": {
-            "type": "record",
-            "name": "my_struct_record",
-            "fields": [
-              {
-                "name": "optional_string_id",
-                "type": ["null", "string"],
-                "default": null
-              }
-            ]
-          }
-        }
-      ]
-    }`
-
-	codec, err := NewCodec(schema)
-	require.NoError(t, err)
+	codec := readAvroSchemaFromFile(t, "subrecord-with-union.json")
 
 	type MyStruct struct {
 		OptionalStringID *string `avro:"optional_string_id"`
