@@ -1,4 +1,4 @@
-module github.com/platelk/avrocado
+module github.com/leboncoin/avrocado
 
 go 1.12
 
