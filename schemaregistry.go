@@ -3,6 +3,7 @@ package avro
 // Retrieved from https://github.com/Landoop/schema-registry
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -88,11 +89,11 @@ func (c *ConfluentSchemaRegistry) do(method, urlPath string, in interface{}, out
 	u.Path = path.Join(u.Path, urlPath)
 	var rdp io.Reader
 	if in != nil {
-		var wr *io.PipeWriter
-		rdp, wr = io.Pipe()
-		go func() {
-			wr.CloseWithError(json.NewEncoder(wr).Encode(in)) // nolint
-		}()
+		body, err := json.Marshal(in)
+		if err != nil {
+			return err
+		}
+		rdp = bytes.NewReader(body)
 	}
 	req, err := http.NewRequest(method, u.String(), rdp)
 	if err != nil {
