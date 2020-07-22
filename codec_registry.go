@@ -3,6 +3,7 @@ package avro
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
@@ -58,7 +59,9 @@ type CodecRegistry struct {
 // Note: the CodecRegistry will take care of registering the schema and dynamic decoding
 func NewCodecRegistry(registryURL, subject, schema string) (*CodecRegistry, error) {
 	return newRegistry(registryURL, subject, schema, func(r *CodecRegistry, rawSchema string) error {
-		return r.init(rawSchema, nil)
+		return r.init(rawSchema, func() error {
+			return fmt.Errorf("the given schema is not registered inside %s", registryURL)
+		})
 	})
 }
 
