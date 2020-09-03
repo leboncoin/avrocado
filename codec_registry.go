@@ -151,17 +151,9 @@ func (r *CodecRegistry) getCodecByID(ID SchemaID) (*Codec, *Schema, error) {
 	var schema Schema
 	codec, ok := r.codecByID[ID]
 	if !ok {
-		rawSchema, err := r.Registry.GetSchemaByID(int(ID))
+		_, err := r.Registry.GetSchemaByID(int(ID))
 		if err != nil {
 			return nil, nil, err
-		}
-		var isRegistered bool // avoid shadowing
-		isRegistered, schema, err = r.Registry.IsRegistered(r.subject, rawSchema)
-		if err != nil {
-			return nil, nil, err
-		}
-		if !isRegistered {
-			return nil, nil, errors.Errorf("impossible to decode an unregistered schema (unknown id: %d on registry)", ID)
 		}
 		codec, err = NewCodec(schema.Schema)
 		if err != nil {
