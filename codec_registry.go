@@ -126,46 +126,7 @@ func (r *CodecRegistry) Unmarshal(from []byte, to interface{}) error {
 		return errors.Errorf("the parsed magic byte %q is not correct (expected %q)", header.MagicByte, MagicByte)
 	}
 
-	codec, schema, err := r.getCodecByID(header.ID)
-	if err != nil {
-		return errors.Wrapf(err, "error when getting codec for schema id %v", header.ID)
-	}
-
-	if r.SchemaID != UnknownID && schema.Version < r.SchemaVersion {
-		tmpTo := make(map[string]interface{})
-		err = codec.Unmarshal(binBuffer.Bytes(), &tmpTo)
-		if err != nil {
-			return err
-		}
-		from, err = r.Marshal(tmpTo)
-		if err != nil {
-			return err
-		}
-		return r.Unmarshal(from, to)
-	}
-	return codec.Unmarshal(binBuffer.Bytes(), to)
-}
-
-// getCodecByID will retriever a codec and its associated schema and check if the schema is correctly registered under the right topic
-func (r *CodecRegistry) getCodecByID(ID SchemaID) (*Codec, *Schema, error) {
-	var schema Schema
-	codec, ok := r.codecByID[ID]
-	if !ok {
-		_, err := r.Registry.GetSchemaByID(int(ID))
-		if err != nil {
-			return nil, nil, err
-		}
-		codec, err = NewCodec(schema.Schema)
-		if err != nil {
-			return nil, nil, err
-		}
-		r.codecByID[ID] = codec
-		r.schemaByID[ID] = &schema
-	} else {
-		schema = *r.schemaByID[ID]
-	}
-
-	return codec, &schema, nil
+	return r.Unmarshal(binBuffer.Bytes(), to)
 }
 
 // Marshal implements Marshaller
