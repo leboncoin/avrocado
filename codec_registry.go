@@ -5,8 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-
-	"github.com/pkg/errors"
 )
 
 // DefaultEndianness is the endianness used for marshal/unmarshalling.
@@ -28,7 +26,7 @@ const UnknownID SchemaID = -1
 const UnknownVersion = -1
 
 // ErrNoEncodeSchema is the error returned when an encode happens without a schema provided
-var ErrNoEncodeSchema = errors.New("no encoding schema have been initialized")
+var ErrNoEncodeSchema = fmt.Errorf("no encoding schema have been initialized")
 
 // Header is the first data of an AvroMessage
 type Header struct {
@@ -84,18 +82,18 @@ func (r *CodecRegistry) SetTypeNameEncoder(typeNameEncoder TypeNameEncoder) {
 func (r *CodecRegistry) Register(rawSchema string) error {
 	_, err := r.Registry.RegisterNewSchema(r.subject, rawSchema)
 	if err != nil {
-		return errors.Wrap(err, "RegisterNewSchema error")
+		return fmt.Errorf("RegisterNewSchema error: %w", err)
 	}
 	isRegistered, schema, err := r.Registry.IsRegistered(r.subject, rawSchema)
 	if err != nil {
-		return errors.Wrap(err, "IsRegistered error")
+		return fmt.Errorf("IsRegistered error: %w", err)
 	}
 	if !isRegistered {
-		return errors.Errorf("can't register schema")
+		return fmt.Errorf("can't register schema")
 	}
 	codec, err := NewCodec(rawSchema)
 	if err != nil {
-		return errors.Wrap(err, "NewCodec error")
+		return fmt.Errorf("NewCodec error: %w", err)
 	}
 	if r.TypeNameEncoder != nil {
 		codec.TypeNameEncoder = r.TypeNameEncoder
@@ -116,19 +114,19 @@ func (r *CodecRegistry) Unmarshal(from []byte, to interface{}) error {
 	header := Header{}
 	err := binary.Read(binBuffer, DefaultEndianness, &header.MagicByte)
 	if err != nil && err != io.EOF {
-		return errors.Wrap(err, "binary.Read magic byte error")
+		return fmt.Errorf("binary.Read magic byte error: %w", err)
 	}
 	err = binary.Read(binBuffer, DefaultEndianness, &header.ID)
 	if err != nil && err != io.EOF {
-		return errors.Wrap(err, "binary.Read ID error")
+		return fmt.Errorf("binary.Read ID error: %w", err)
 	}
 	if header.MagicByte != MagicByte {
-		return errors.Errorf("the parsed magic byte %q is not correct (expected %q)", header.MagicByte, MagicByte)
+		return fmt.Errorf("the parsed magic byte %q is not correct (expected %q)", header.MagicByte, MagicByte)
 	}
 
 	codec, schema, err := r.getCodecByID(header.ID)
 	if err != nil {
-		return errors.Wrapf(err, "error when getting codec for schema id %v", header.ID)
+		return fmt.Errorf("error when getting codec for schema id %v: %w", header.ID, err)
 	}
 
 	if r.SchemaID != UnknownID && schema.Version < r.SchemaVersion {
@@ -161,7 +159,7 @@ func (r *CodecRegistry) getCodecByID(ID SchemaID) (*Codec, *Schema, error) {
 			return nil, nil, err
 		}
 		if !isRegistered {
-			return nil, nil, errors.Errorf("impossible to decode an unregistered schema (unknown id: %d on registry)", ID)
+			return nil, nil, fmt.Errorf("impossible to decode an unregistered schema (unknown id: %d on registry)", ID)
 		}
 		codec, err = NewCodec(schema.Schema)
 		if err != nil {
@@ -229,7 +227,7 @@ func (r *CodecRegistry) init(rawSchema string, schemaNotRegisteredFunc func() er
 	}
 	isRegistered, schema, err := r.Registry.IsRegistered(r.subject, rawSchema)
 	if err != nil {
-		return errors.Wrapf(err, "Registry.IsRegistered error for %s", r.subject)
+		return fmt.Errorf("Registry.IsRegistered error for %s: %w", r.subject, err)
 	}
 
 	if !isRegistered {
@@ -237,12 +235,12 @@ func (r *CodecRegistry) init(rawSchema string, schemaNotRegisteredFunc func() er
 			return schemaNotRegisteredFunc()
 		}
 
-		return errors.Errorf("schema %s is not registered in the schema registry", r.subject)
+		return fmt.Errorf("schema %s is not registered in the schema registry", r.subject)
 	}
 	r.SchemaID = SchemaID(schema.ID)
 	codec, err := NewCodec(rawSchema)
 	if err != nil {
-		return errors.Wrap(err, "NewCodec error")
+		return fmt.Errorf("NewCodec error: %w", err)
 	}
 	r.codecByID[SchemaID(schema.ID)] = codec
 	r.schemaByID[SchemaID(schema.ID)] = &schema

@@ -11,8 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-
-	"github.com/pkg/errors"
 )
 
 // DefaultURL is the address where a local schema registry listens by default.
@@ -73,12 +71,12 @@ type ConfluentSchemaRegistry struct {
 func parseSchemaRegistryError(resp *http.Response) error {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return errors.Wrap(err, "ioutil.ReadAll error while reading error body")
+		return fmt.Errorf("ioutil.ReadAll error while reading error body: %w", err)
 	}
 
 	var ce confluentError
 	if err := json.Unmarshal(body, &ce); err != nil {
-		return errors.Wrapf(err, "json.Unmarshal error while reading error body: %q", body)
+		return fmt.Errorf("json.Unmarshal error while reading error body: %q: %w", body, err)
 	}
 	return ce
 }
@@ -97,14 +95,14 @@ func (c *ConfluentSchemaRegistry) do(method, urlPath string, in interface{}, out
 	}
 	req, err := http.NewRequest(method, u.String(), rdp)
 	if err != nil {
-		return errors.Wrap(err, "http.NewRequest error")
+		return fmt.Errorf("http.NewRequest error: %w", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/vnd.schemaregistry.v1+json, application/vnd.schemaregistry+json, application/json")
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "ConfluentSchemaRegistry.Do error")
+		return fmt.Errorf("ConfluentSchemaRegistry.Do error; %w", err)
 	}
 	defer func() {
 		if resp.Body != nil {
@@ -116,7 +114,12 @@ func (c *ConfluentSchemaRegistry) do(method, urlPath string, in interface{}, out
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return parseSchemaRegistryError(resp)
 	}
-	return errors.Wrap(json.NewDecoder(resp.Body).Decode(out), "json.Decode error")
+	err = json.NewDecoder(resp.Body).Decode(out)
+	if err != nil {
+		return fmt.Errorf("json.Decode error: %w", err)
+	}
+
+	return nil
 }
 
 // Subjects returns all registered subjects.
