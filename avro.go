@@ -9,7 +9,7 @@ import (
 
 	"github.com/fatih/camelcase"
 	"github.com/leboncoin/structs"
-	"github.com/linkedin/goavro"
+	"github.com/linkedin/goavro/v2"
 	"github.com/mitchellh/mapstructure"
 )
 

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/linkedin/goavro"
+	"github.com/linkedin/goavro/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
