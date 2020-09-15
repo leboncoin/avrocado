@@ -20,10 +20,9 @@ func NewMockCodecRegistry(subject string) *CodecRegistry {
 		}
 	}
 	return &CodecRegistry{
-		codecByID:  make(map[SchemaID]*Codec),
-		schemaByID: make(map[SchemaID]*Schema),
-		Registry:   Registry,
-		subject:    subject,
+		codecByID: make(map[SchemaID]*Codec),
+		Registry:  Registry,
+		subject:   subject,
 	}
 }
 
@@ -232,10 +231,9 @@ func TestAvroHeaderInBytes(t *testing.T) {
 func Test_should_be_able_to_unmarshal_payload_sent_by_kafkarest(t *testing.T) {
 	registry := NewNOOPClient()
 	codec := &CodecRegistry{
-		codecByID:  make(map[SchemaID]*Codec),
-		schemaByID: make(map[SchemaID]*Schema),
-		Registry:   registry,
-		subject:    "subject",
+		codecByID: make(map[SchemaID]*Codec),
+		Registry:  registry,
+		subject:   "subject",
 	}
 	_, _ = registry.RegisterNewSchema("subject", "{}")
 	err := codec.Register(`{
@@ -303,10 +301,10 @@ func TestCodecRegistry_Unmarshal_version_upgrade(t *testing.T) {
 	err = codecV2.initAndRegister(schemaV2)
 	assert.NoError(t, err)
 
-	avro, err := codecV2.Marshal(&val)
+	avro, err := codecV1.Marshal(&val)
 	assert.NoError(t, err)
 	data := make(map[string]interface{})
-	err = codecV1.Unmarshal(avro, &data)
+	err = codecV2.Unmarshal(avro, &data)
 	assert.NoError(t, err)
 	assert.NotNil(t, data["name"])
 	assert.NotNil(t, data["age"])

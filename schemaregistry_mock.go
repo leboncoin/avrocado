@@ -6,10 +6,9 @@ import "fmt"
 // schema registry
 func NewNOOPCodecRegistry(subject string) *CodecRegistry {
 	return &CodecRegistry{
-		codecByID:  make(map[SchemaID]*Codec),
-		schemaByID: make(map[SchemaID]*Schema),
-		Registry:   NewNOOPClient(),
-		subject:    subject,
+		codecByID: make(map[SchemaID]*Codec),
+		Registry:  NewNOOPClient(),
+		subject:   subject,
 	}
 }
 
