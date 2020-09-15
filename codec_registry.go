@@ -37,12 +37,10 @@ type Header struct {
 // CodecRegistry is an avro serializer and unserializer which is connected to the schemaregistry
 // to dynamically discover and decode schemas
 type CodecRegistry struct {
-	subject       string
-	codecByID     map[SchemaID]*Codec
-	schemaByID    map[SchemaID]*Schema
-	Registry      SchemaRegistry
-	SchemaID      SchemaID
-	SchemaVersion int
+	subject   string
+	codecByID map[SchemaID]*Codec
+	Registry  SchemaRegistry
+	SchemaID  SchemaID
 	// TypeNameEncoder is the convertion logic to translate type name from go to avro
 	TypeNameEncoder TypeNameEncoder
 }
@@ -99,9 +97,7 @@ func (r *CodecRegistry) Register(rawSchema string) error {
 		codec.TypeNameEncoder = r.TypeNameEncoder
 	}
 	r.codecByID[SchemaID(schema.ID)] = codec
-	r.schemaByID[SchemaID(schema.ID)] = &schema
 	r.SchemaID = SchemaID(schema.ID)
-	r.SchemaVersion = schema.Version
 	return nil
 }
 
@@ -124,12 +120,12 @@ func (r *CodecRegistry) Unmarshal(from []byte, to interface{}) error {
 		return fmt.Errorf("the parsed magic byte %q is not correct (expected %q)", header.MagicByte, MagicByte)
 	}
 
-	codec, schema, err := r.getCodecByID(header.ID)
+	codec, err := r.getCodecByID(header.ID)
 	if err != nil {
 		return fmt.Errorf("error when getting codec for schema id %v: %w", header.ID, err)
 	}
 
-	if r.SchemaID != UnknownID && schema.Version < r.SchemaVersion {
+	if r.SchemaID != UnknownID && header.ID != r.SchemaID {
 		tmpTo := make(map[string]interface{})
 		err = codec.Unmarshal(binBuffer.Bytes(), &tmpTo)
 		if err != nil {
@@ -145,33 +141,22 @@ func (r *CodecRegistry) Unmarshal(from []byte, to interface{}) error {
 }
 
 // getCodecByID will retriever a codec and its associated schema and check if the schema is correctly registered under the right topic
-func (r *CodecRegistry) getCodecByID(ID SchemaID) (*Codec, *Schema, error) {
-	var schema Schema
+func (r *CodecRegistry) getCodecByID(ID SchemaID) (*Codec, error) {
 	codec, ok := r.codecByID[ID]
 	if !ok {
 		rawSchema, err := r.Registry.GetSchemaByID(int(ID))
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		var isRegistered bool // avoid shadowing
-		isRegistered, schema, err = r.Registry.IsRegistered(r.subject, rawSchema)
-		if err != nil {
-			return nil, nil, err
-		}
-		if !isRegistered {
-			return nil, nil, fmt.Errorf("impossible to decode an unregistered schema (unknown id: %d on registry)", ID)
-		}
-		codec, err = NewCodec(schema.Schema)
-		if err != nil {
-			return nil, nil, err
-		}
-		r.codecByID[ID] = codec
-		r.schemaByID[ID] = &schema
-	} else {
-		schema = *r.schemaByID[ID]
-	}
 
-	return codec, &schema, nil
+		codec, err = NewCodec(rawSchema)
+		if err != nil {
+			return nil, err
+		}
+
+		r.codecByID[ID] = codec
+	}
+	return codec, nil
 }
 
 // Marshal implements Marshaller
@@ -204,10 +189,9 @@ func newRegistry(registryURL string, subject string, schema string, initFunc fun
 		return nil, err
 	}
 	CodecRegistry := &CodecRegistry{
-		codecByID:  make(map[SchemaID]*Codec),
-		schemaByID: make(map[SchemaID]*Schema),
-		subject:    subject,
-		Registry:   schemaRegistry,
+		codecByID: make(map[SchemaID]*Codec),
+		subject:   subject,
+		Registry:  schemaRegistry,
 	}
 
 	err = initFunc(CodecRegistry, schema)
@@ -222,7 +206,6 @@ func newRegistry(registryURL string, subject string, schema string, initFunc fun
 func (r *CodecRegistry) init(rawSchema string, schemaNotRegisteredFunc func() error) error {
 	if len(rawSchema) == 0 {
 		r.SchemaID = UnknownID
-		r.SchemaVersion = UnknownVersion
 		return nil
 	}
 	isRegistered, schema, err := r.Registry.IsRegistered(r.subject, rawSchema)
@@ -243,9 +226,7 @@ func (r *CodecRegistry) init(rawSchema string, schemaNotRegisteredFunc func() er
 		return fmt.Errorf("NewCodec error: %w", err)
 	}
 	r.codecByID[SchemaID(schema.ID)] = codec
-	r.schemaByID[SchemaID(schema.ID)] = &schema
 	r.SchemaID = SchemaID(schema.ID)
-	r.SchemaVersion = schema.Version
 	return nil
 }
 
