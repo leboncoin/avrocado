@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/leboncoin/avrocado.svg?branch=master)](https://travis-ci.org/leboncoin/avrocado)
+
 # Avrocado
 
 Avrocado is a convenience library to handle Avro in golang, built on top of [linkedin/goavro](https://github.com/linkedin/goavro).
