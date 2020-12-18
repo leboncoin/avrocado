@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"sync"
 )
 
 // DefaultEndianness is the endianness used for marshal/unmarshalling.
@@ -37,12 +38,14 @@ type Header struct {
 // CodecRegistry is an avro serializer and unserializer which is connected to the schemaregistry
 // to dynamically discover and decode schemas
 type CodecRegistry struct {
-	subject   string
-	codecByID map[SchemaID]*Codec
-	Registry  SchemaRegistry
-	SchemaID  SchemaID
+	subject  string
+	Registry SchemaRegistry
+	SchemaID SchemaID
 	// TypeNameEncoder is the convertion logic to translate type name from go to avro
 	TypeNameEncoder TypeNameEncoder
+
+	codecByID map[SchemaID]*Codec
+	codecLock sync.RWMutex
 }
 
 // NewCodecRegistry configures a codec connected to the schema registry.
@@ -71,6 +74,8 @@ func NewCodecRegistryAndRegister(registryURL string, subject string, schema stri
 // SetTypeNameEncoder will set the TypeNameEncoder of the codec registry and apply it to all previously created codec
 func (r *CodecRegistry) SetTypeNameEncoder(typeNameEncoder TypeNameEncoder) {
 	r.TypeNameEncoder = typeNameEncoder
+	r.codecLock.RLock()
+	defer r.codecLock.RUnlock()
 	for _, codec := range r.codecByID {
 		codec.TypeNameEncoder = r.TypeNameEncoder
 	}
@@ -96,7 +101,9 @@ func (r *CodecRegistry) Register(rawSchema string) error {
 	if r.TypeNameEncoder != nil {
 		codec.TypeNameEncoder = r.TypeNameEncoder
 	}
+	r.codecLock.Lock()
 	r.codecByID[SchemaID(schema.ID)] = codec
+	r.codecLock.Unlock()
 	r.SchemaID = SchemaID(schema.ID)
 	return nil
 }
@@ -142,20 +149,25 @@ func (r *CodecRegistry) Unmarshal(from []byte, to interface{}) error {
 
 // getCodecByID will retriever a codec and its associated schema and check if the schema is correctly registered under the right topic
 func (r *CodecRegistry) getCodecByID(ID SchemaID) (*Codec, error) {
-	codec, ok := r.codecByID[ID]
-	if !ok {
-		rawSchema, err := r.Registry.GetSchemaByID(int(ID))
-		if err != nil {
-			return nil, err
-		}
-
-		codec, err = NewCodec(rawSchema)
-		if err != nil {
-			return nil, err
-		}
-
-		r.codecByID[ID] = codec
+	r.codecLock.RLock()
+	if codec, ok := r.codecByID[ID]; ok {
+		r.codecLock.RUnlock()
+		return codec, nil
 	}
+	r.codecLock.RUnlock()
+	r.codecLock.Lock()
+	defer r.codecLock.Unlock()
+	rawSchema, err := r.Registry.GetSchemaByID(int(ID))
+	if err != nil {
+		return nil, err
+	}
+
+	codec, err := NewCodec(rawSchema)
+	if err != nil {
+		return nil, err
+	}
+
+	r.codecByID[ID] = codec
 	return codec, nil
 }
 
