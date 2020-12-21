@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/leboncoin/avrocado.svg?branch=master)](https://travis-ci.org/leboncoin/avrocado)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/leboncoin/avrocado)](https://pkg.go.dev/github.com/leboncoin/avrocado)
 
 # Avrocado
 
