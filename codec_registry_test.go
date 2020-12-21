@@ -138,6 +138,48 @@ func TestAvroCodecRegistry(t *testing.T) {
 	assert.Equal(t, int32(36), decodedMap["age"])
 }
 
+func TestAvroCodecRegistry_can_unmarshall_multiple_objects(t *testing.T) {
+	schema := `{
+	  "type": "record",
+	  "name": "Person",
+	  "fields": [
+	    {
+	      "name": "name",
+	      "type": "string"
+	    }, {
+	      "name": "age",
+	      "type": "int"
+	    }
+	  ]
+	}`
+
+	val := Person{"Nico", 36}
+
+	codec := NewMockCodecRegistry("test")
+	err := codec.initAndRegister(schema)
+	assert.NoError(t, err)
+
+	avro, err := codec.Marshal(&val)
+	assert.NoError(t, err)
+
+	for i := 0; i < 10; i++ {
+		go func() {
+			var decoded Person
+			err := codec.Unmarshal(avro, &decoded)
+			assert.NoError(t, err)
+
+			assert.Equal(t, decoded, val)
+
+			// Test with map[string]interface{}
+			decodedMap := make(map[string]interface{})
+			err = codec.Unmarshal(avro, &decodedMap)
+			assert.NoError(t, err)
+			assert.Equal(t, "Nico", decodedMap["name"])
+			assert.Equal(t, int32(36), decodedMap["age"])
+		}()
+	}
+}
+
 type NestedStructForTest struct {
 	S string
 }

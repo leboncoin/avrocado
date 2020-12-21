@@ -2,7 +2,7 @@ version: "3.0"
 
 services:
   test:
-    image: golang:1.11
+    image: golang:1.15
     volumes:
       - ./wait-for.sh:/usr/bin/wait-for:ro
       - .:/go/src/github.com/avrocado
